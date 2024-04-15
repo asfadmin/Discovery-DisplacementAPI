@@ -9,7 +9,5 @@ Run pip install from the project's root folder
 
 
 ``` python
-uvicorn src.application:app --port 8080
-
---reload
+uvicorn src.application:app --port 8080 --reload
 ```
