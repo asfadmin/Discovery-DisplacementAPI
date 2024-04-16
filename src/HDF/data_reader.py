@@ -29,9 +29,15 @@ def read_layer_as_png_buffer(file_name: str, layer: str) -> io.BytesIO:
     formatted = np.array(data[layer][:], dtype=np.float32)
     logging.debug(msg=f'"{layer}" layer read from "{file_name}", layer shape: {formatted.shape}')
     
-    normalized_layer = _normalize(formatted)
-    img = Image.fromarray(normalized_layer, mode="F")
-    img = img.convert('RGBA')
+    formatted = 255.0 * _normalize(formatted)
+    img = Image.fromarray(formatted)
+    img = img.convert('RGB')
+    
+    mask = np.invert(np.isnan(formatted)).astype(np.float32) * 255.0
+    mask_image = Image.fromarray(mask)
+    mask_image = mask_image.convert('L')
+    img.putalpha(mask_image)
+
     io_buffer = io.BytesIO()
 
     logging.debug(msg=f'"writing layer to bytes buffer as jpeg')
@@ -59,4 +65,4 @@ def _normalize(data: npt.NDArray) -> npt.NDArray:
     ptp = np.nanmax(data) - lower
     
     # normalize
-    return 255.0 * ((data - lower) / ptp)
+    return (data - lower) / ptp

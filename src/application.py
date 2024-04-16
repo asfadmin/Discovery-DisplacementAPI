@@ -30,8 +30,8 @@ def get_items_list():
     return Response(content=json.dumps({"files": nc_files}), media_type='application/json', headers=DEFAULT_HEADERS
     )
 
-
-@app.get("/items/{file_name}/layers/{layer}", description=f'Takes a valid file name and reads a layer from it, converted to a png')
+# TODO: Remove this endpoint when browses are available
+@app.get("/items/{file_name}/layers/{layer}", description=f'(For Development Only): Takes a valid file name and reads a layer from it, converted to a png with nan values as alpha channel')
 def read_item(file_name: str, layer: str):
     if layer not in layer_types:
         raise HTTPException(
