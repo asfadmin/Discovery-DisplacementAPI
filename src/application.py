@@ -1,15 +1,19 @@
 import os
 import json
+from typing import List
 
 from fastapi import APIRouter, FastAPI, HTTPException, Response
 
 import logging
 
+from pydantic import BaseModel
+
+from src.HDF.data_reader import open_datasets
 from src.timeseries import get_timeseries_at_pixel, layer_types
 from src.HDF import open_dataset, datasets_path, read_layer_as_png_buffer, get_wkt_from_dataset
 
 from . import log_router
-
+import fsspec
 router = APIRouter(route_class=log_router.LoggingRoute)
 app = FastAPI()
 
@@ -21,6 +25,7 @@ import numpy as np
 
 @app.get("/")
 def read_root():
+    f_system = fsspec.get_filesystem_class('s3')
     return {"Status": "A-Okay"}
 
 # TODO: Remove when working with actual data
@@ -31,7 +36,7 @@ def get_items_list():
     )
 
 # TODO: Remove this endpoint when browses are available
-@app.get("/items/{file_name}/layers/{layer}", description=f'(For Development Only): Takes a valid file name and reads a layer from it, converted to a png with nan values as alpha channel')
+@app.get("/items/layers", description=f'(For Development Only): Takes a valid file name and reads a layer from it, converted to a png with nan values as alpha channel')
 def read_item(file_name: str, layer: str):
     if layer not in layer_types:
         raise HTTPException(
@@ -41,19 +46,31 @@ def read_item(file_name: str, layer: str):
     png_buffer = read_layer_as_png_buffer(file_name=file_name, layer=layer)
     return Response(content=png_buffer.getvalue(), headers={"Content-Disposition": 'inline; filename="test.png"', **DEFAULT_HEADERS}, media_type="image/png")
 
-@app.get("/items/{file_name}/wkt", description=f'Returns a json response with the wkt and epsg of the file')
+@app.get("/items/wkt", description=f'Returns a json response with the wkt and epsg of the file')
 def get_wkt(file_name: str):
     data = open_dataset(file_name=file_name)
     identification = open_dataset(file_name=file_name, group='identification')
     output = get_wkt_from_dataset(data, identification)
     return Response(content=json.dumps(output), media_type='application/json', headers=DEFAULT_HEADERS)
 
+class   TimeSeriesModel(BaseModel):
+    files: List[str]
+    x: float = 0.0
+    y: float = 0.0
 
-@app.get("/timeseries", description=f'Returns a json response with ')
-def get_time_series(x: float = 0, y: float = 0):
+# TODO: Test these out
+
+@app.post("/timeseries", description=f'Returns a json response with ')
+def get_time_series(series: TimeSeriesModel):
     # epsg: 32610
-
+    x = series.x
+    y = series.y
+    files = series.files
+    from time import time
+    perf = time()
+    # d = open_datasets(files, 'unwrapped_phase') # group not found for some reason
+    perf = time() - perf
     logging.debug(f'Sampling timeseries at lon {x}, lat {y}')
-    time_series, averages = get_timeseries_at_pixel(x=x,y=y, file_stack=[file for file in os.listdir(datasets_path) if file.endswith(".nc")])
+    time_series, averages = get_timeseries_at_pixel(x=x,y=y, file_stack=[file for file in files])
     
     return Response(content=json.dumps({'time_series': time_series, 'coordinates': [x, y], 'averages': averages}), media_type='application/json', headers=DEFAULT_HEADERS)

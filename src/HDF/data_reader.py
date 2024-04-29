@@ -8,21 +8,37 @@ import numpy.typing as npt
 
 import io
 from PIL import Image
-
-
+# from fsspec.implementations.local import S3FileSystem
+from s3fs.core import S3FileSystem
 cwd = os.getcwd()
 test_path = os.path.join(cwd, 'tests')
 datasets_path = os.path.join(test_path, "./sample_products")
 
 def open_dataset(file_name: str, group: str = None) -> xr.Dataset:
+    # https://docs.aws.amazon.com/sdk-for-go/api/aws/credentials/endpointcreds/
+    s3 = S3FileSystem()
+    fsspec_file = s3.open(file_name)
     try:
         logging.debug(msg=f'Reading "{file_name}"{"" if group is None else "Group: " + group} into dataset')
-        data = xr.open_dataset(os.path.join(datasets_path, file_name),group=group)
+        # https://filesystem-spec.readthedocs.io/en/latest/
+        # https://docs.xarray.dev/en/stable/user-guide/io.html#cloud-storage-buckets
+        data = xr.open_dataset(fsspec_file,group=group,
+    # backend_kwargs={
+    #     "storage_options": {"project": "<project-name>", "token": None}
+    # },
+    engine="h5netcdf",
+    )
     except Exception as e:
         raise HTTPException(400, f"Failed to read field name {file_name}: {e}")
     
     logging.debug(msg=f'"{file_name}" read into dataset!')
     return data
+
+def open_datasets(file_names: str, group: str = None) -> xr.Dataset:
+    s3 = S3FileSystem()
+    fsspec_files = [s3.open(file_name) for file_name in file_names]
+    datasets = xr.open_mfdataset(fsspec_files, group=group, engine="h5netcdf")
+    return datasets
 
 def read_layer_as_png_buffer(file_name: str, layer: str) -> io.BytesIO:
     data = open_dataset(file_name=file_name)

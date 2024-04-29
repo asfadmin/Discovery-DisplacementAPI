@@ -3,7 +3,7 @@ import math
 from typing import Optional
 
 import numpy as np
-import rasterio
+# import rasterio
 from src.HDF.data_reader import open_dataset, get_crs
 from pyproj import CRS, Transformer
 import xarray as xr
@@ -31,8 +31,12 @@ def _read_layers_at_pixel(dataset: xr.Dataset, x: float, y: float) -> dict[str, 
 
 def _sample_nearest_pixel(data_layer: xr.DataArray, x: float, y: float) -> Optional[float]:
     # samples nearest pixel to projected x,y value, returns value or None
-    value = data_layer.sel(x=x, y=y, method="nearest", drop=True).to_numpy().tolist()
-    if math.isnan(value):
+    try:
+        value = data_layer.sel(x=x, y=y, method="nearest", drop=True).to_numpy().tolist()
+        if math.isnan(value):
+            value = None
+    except KeyError as exc:
+        logging.warning(exc)
         value = None
     return value
 
@@ -44,7 +48,7 @@ def _calculate_layer_average(values: dict[str, float | None], layer: str):
     return average
 
 
-def _to_crs(x, y, source_proj='4326', target_proj='3857'): # EPSG:3857 (formerly 32610)
+def _to_crs(x, y, source_proj='4326', target_proj='32610'): # EPSG:3857 (formerly 32610)
     source_crs = CRS.from_epsg(source_proj)
     target_crs = CRS.from_epsg(target_proj)
 
