@@ -14,7 +14,7 @@ with open("README.md", "r") as readme_file:
     readme = readme_file.read()
 
 setup(
-    name="asf-hdf-reader-api",
+    name="OperaTimeseriesAPI",
     # version=Declared in pyproject.toml, through "[tool.setuptools_scm]"
     author="Alaska Satellite Facility Discovery Team",
     author_email="uaf-asf-discovery@alaska.edu",
@@ -26,7 +26,7 @@ setup(
         'Documentation': 'https://docs.asf.alaska.edu/asf_search/basics/'
     },
     packages=find_packages(exclude=["tests.*", "tests", "examples.*", "examples"]),
-    package_dir={'asf-hdf-reader-api': 'src'},
+    package_dir={'OperaTimeseriesAPI': 'src'},
     include_package_data=True,
     python_requires='>=3.8',
     install_requires=requirements,

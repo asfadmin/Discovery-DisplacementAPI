@@ -6,6 +6,7 @@ from fastapi import APIRouter, FastAPI, HTTPException, Response
 
 import logging
 
+from mangum import Mangum
 from pydantic import BaseModel
 
 from src.HDF.data_reader import open_datasets
@@ -17,6 +18,9 @@ import fsspec
 router = APIRouter(route_class=log_router.LoggingRoute)
 app = FastAPI()
 
+lambda_handler = Mangum(
+    app
+    )
 DEFAULT_HEADERS = {
     "Access-Control-Allow-Origin": "*",
 }
@@ -25,7 +29,6 @@ import numpy as np
 
 @app.get("/")
 def read_root():
-    f_system = fsspec.get_filesystem_class('s3')
     return {"Status": "A-Okay"}
 
 # TODO: Remove when working with actual data
