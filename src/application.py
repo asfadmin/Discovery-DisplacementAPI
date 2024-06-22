@@ -74,6 +74,7 @@ def get_time_series(series: TimeSeriesModel):
     # d = open_datasets(files, 'unwrapped_phase') # group not found for some reason
     perf = time() - perf
     logging.debug(f'Sampling timeseries at lon {x}, lat {y}')
-    time_series, averages = get_timeseries_at_pixel(x=x,y=y, file_stack=[file for file in files])
-    
-    return Response(content=json.dumps({'time_series': time_series, 'coordinates': [x, y], 'averages': averages}), media_type='application/json', headers=DEFAULT_HEADERS)
+    values, averages = get_timeseries_at_pixel(x=x,y=y, file_stack=[file for file in files])
+    output = json.loads(values)
+    output['averages'] = averages
+    return Response(content=json.dumps(output), media_type='application/json', headers=DEFAULT_HEADERS)
