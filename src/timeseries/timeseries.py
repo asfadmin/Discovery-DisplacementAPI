@@ -22,7 +22,7 @@ def get_timeseries_at_pixel(
     values = open_datasets(file_names=file_stack)
     # values = [_read_layers_at_pixel(open_dataset(file), x, y) for file in file_stack]
     
-    values = _read_layers_at_pixel(values[["unwrapped_phase", "interferometric_correlation", "temporal_coherence", "spatial_ref"]], x, y)
+    values = _read_layers_at_pixel(values[["unwrapped_phase", "interferometric_correlation", "temporal_coherence", "spatial_ref", "time"]], x, y)
     averages = values.mean(dim='time', skipna=True)
     averages = {
         'unwrapped_phase': averages['unwrapped_phase'].values.item(),

@@ -38,6 +38,10 @@ def open_datasets(file_names: list[str], group: str = None) -> xr.Dataset:
     s3 = S3FileSystem()
     fsspec_files = [s3.open(file_name) for file_name in file_names]
     datasets = xr.open_mfdataset(fsspec_files,
+                                 join='exact',
+                                 coords='minimal',
+                                 data_vars='minimal',
+                                 compat='override',
                                  concat_dim='time', combine="nested", parallel=True,
                                  )
 
