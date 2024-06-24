@@ -40,7 +40,7 @@ def open_datasets(file_names: list[str], preprocess, group: str = None) -> xr.Da
     datasets = xr.open_mfdataset(fsspec_files,
                                  join='exact',
                                 #  coords=["time"],
-                                #  data_vars='minimal',
+                                 data_vars='different',
                                 #  compat='override',
                                  
                                 #  combine="by_coords",
