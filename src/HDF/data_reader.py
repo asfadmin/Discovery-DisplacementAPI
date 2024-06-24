@@ -39,11 +39,8 @@ def open_datasets(file_names: list[str], preprocess, group: str = None) -> xr.Da
     fsspec_files = [s3.open(file_name) for file_name in file_names]
     datasets = xr.open_mfdataset(fsspec_files,
                                  join='exact',
-                                #  coords=["time"],
                                  data_vars='different',
-                                #  compat='override',
-                                 
-                                #  combine="by_coords",
+                                chunks='auto',
                                  concat_dim='time',
                                  combine="nested", 
                                 engine="h5netcdf",
