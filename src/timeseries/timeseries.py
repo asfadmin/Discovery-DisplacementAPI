@@ -19,10 +19,10 @@ def get_timeseries_at_pixel(
     
     # TODO: Make this a numpy structured array
     _read_partial_pixels_at_layers = partial(_read_layers_at_pixel, x=x, y=y)
-    values = open_datasets(file_names=file_stack)
+    values = open_datasets(file_names=file_stack, preprocess=_read_partial_pixels_at_layers)
     # values = [_read_layers_at_pixel(open_dataset(file), x, y) for file in file_stack]
     
-    values = _read_layers_at_pixel(values[["unwrapped_phase", "interferometric_correlation", "temporal_coherence", "spatial_ref", "time"]], x, y)
+    # values = _read_layers_at_pixel(values[["unwrapped_phase", "interferometric_correlation", "temporal_coherence", "spatial_ref", "time"]], x, y)
     averages = values.mean(dim='time', skipna=True)
     averages = {
         'unwrapped_phase': averages['unwrapped_phase'].values.item(),
@@ -39,7 +39,7 @@ def _read_layers_at_pixel(dataset: xr.Dataset, x: float, y: float) -> xr.Dataset
     # reprojects lon lat to dataset projection, returns dict with reading at each layer
     crs = get_crs(dataset)
     xx, yy = _to_crs(x, y, target_proj=crs.to_epsg())
-    return dataset.sel(x=xx, y=yy, method="nearest")
+    return dataset[["unwrapped_phase", "interferometric_correlation", "temporal_coherence"]].sel(x=xx, y=yy, method="nearest")
 
 
 def _to_crs(x, y, source_proj='4326', target_proj='32610'): # EPSG:3857 (formerly 32610)

@@ -34,18 +34,24 @@ def open_dataset(file_name: str, group: str = None) -> xr.Dataset:
     logging.debug(msg=f'"{file_name}" read into dataset!')
     return data
 
-def open_datasets(file_names: list[str], group: str = None) -> xr.Dataset:
+def open_datasets(file_names: list[str], preprocess, group: str = None) -> xr.Dataset:
     s3 = S3FileSystem()
     fsspec_files = [s3.open(file_name) for file_name in file_names]
     datasets = xr.open_mfdataset(fsspec_files,
                                  join='exact',
-                                 coords='minimal',
-                                 data_vars='minimal',
-                                 compat='override',
-                                 concat_dim='time', combine="nested", parallel=True,
-                                 )
+                                #  coords=["time"],
+                                #  data_vars='minimal',
+                                #  compat='override',
+                                 
+                                #  combine="by_coords",
+                                 concat_dim='time',
+                                 combine="nested", 
+                                engine="h5netcdf",
+                                 parallel=True,
 
-                                #  combine="by_coords", coords='all', engine="h5netcdf", preprocess=preprocess)
+                                #  combine="by_coords", coords='all', engine="h5netcdf", 
+                                preprocess=preprocess
+                                )
     return datasets
 
 def read_layer_as_png_buffer(file_name: str, layer: str) -> io.BytesIO:
