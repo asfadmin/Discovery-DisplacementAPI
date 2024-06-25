@@ -36,7 +36,18 @@ def open_dataset(file_name: str, group: str = None) -> xr.Dataset:
 
 def open_datasets(file_names: list[str], preprocess, group: str = None) -> xr.Dataset:
     s3 = S3FileSystem()
-    fsspec_files = [s3.open(file_name) for file_name in file_names]
+
+    # Implements example from Luis López
+    # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
+    fsspec_params = {
+        "cache_type": "first",  # blockcache not working atm for some reason with open_mfdataset, using first
+        "block_size": 8*1024*1024 # could be bigger
+    }
+    driver_params = { # only recent versions of xarray and h5netcdf allow this correctly
+            "page_buf_size": 32*1024*1024, # this one only works in repacked files
+            "rdcc_nbytes": 8*1024*1024 # this one is to read the chunks 
+        }
+    fsspec_files = [s3.open(file_name, **fsspec_params) for file_name in file_names]
     datasets = xr.open_mfdataset(fsspec_files,
                                  join='exact',
                                  data_vars='different',
@@ -45,10 +56,12 @@ def open_datasets(file_names: list[str], preprocess, group: str = None) -> xr.Da
                                  combine="nested", 
                                 engine="h5netcdf",
                                  parallel=True,
-
+                                
                                 #  combine="by_coords", coords='all', engine="h5netcdf", 
-                                preprocess=preprocess
-                                )
+                                preprocess=preprocess,
+                                # kwargs=driver_params
+                                driver_kwds = driver_params
+    )
     return datasets
 
 def read_layer_as_png_buffer(file_name: str, layer: str) -> io.BytesIO:
