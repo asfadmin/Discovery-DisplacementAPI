@@ -1,28 +1,29 @@
 from functools import partial
-import logging
-import math
-from typing import Optional
-
-import numpy as np
 # import rasterio
-from src.HDF.data_reader import open_dataset, open_datasets, get_crs
+from src.HDF.data_reader import open_datasets, get_crs
 from pyproj import CRS, Transformer
 import xarray as xr
+
+from src.models import DriverKeywords, FsspecParams
 
 layer_types = ["unwrapped_phase", "interferometric_correlation", "temporal_coherence"]
 
 def get_timeseries_at_pixel(
-        x: float = 0, 
-        y: float = 0, 
-        file_stack: list[str] = []
+        x: float, 
+        y: float, 
+        file_stack: list[str],
+        fsspec_params: FsspecParams,
+        driver_config: DriverKeywords
     ) -> tuple[str, dict]:
     
-    # TODO: Make this a numpy structured array
     _read_partial_pixels_at_layers = partial(_read_layers_at_pixel, x=x, y=y)
-    values = open_datasets(file_names=file_stack, preprocess=_read_partial_pixels_at_layers)
-    # values = [_read_layers_at_pixel(open_dataset(file), x, y) for file in file_stack]
-    
-    # values = _read_layers_at_pixel(values[["unwrapped_phase", "interferometric_correlation", "temporal_coherence", "spatial_ref", "time"]], x, y)
+    values = open_datasets(
+        file_names=file_stack, 
+        preprocess=_read_partial_pixels_at_layers,
+        fsspec_params=fsspec_params, 
+        driver_params=driver_config
+    )
+
     averages = values.mean(dim='time', skipna=True)
     averages = {
         'unwrapped_phase': averages['unwrapped_phase'].values.item(),
