@@ -34,32 +34,45 @@ def open_dataset(file_name: str, group: str = None) -> xr.Dataset:
     logging.debug(msg=f'"{file_name}" read into dataset!')
     return data
 
-def open_datasets(file_names: list[str], preprocess, group: str = None) -> xr.Dataset:
+def open_datasets(file_names: list[str], preprocess=None, group: str = None) -> xr.Dataset:
     s3 = S3FileSystem()
 
     # Implements example from Luis López
     # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
     fsspec_params = {
         "cache_type": "first",  # blockcache not working atm for some reason with open_mfdataset, using first
-        "block_size": 8*1024*1024 # could be bigger
+        "block_size": 16*1024*1024,  #24*1024*1024, # could be bigger
     }
     driver_params = { # only recent versions of xarray and h5netcdf allow this correctly
             "page_buf_size": 32*1024*1024, # this one only works in repacked files
-            "rdcc_nbytes": 8*1024*1024 # this one is to read the chunks 
+            "rdcc_nbytes": 24*1024*1024, # this one is to read the chunks 
+            "rdcc_nslots": 641 #2 #997 # default is 521
         }
+    
+
+
+
+    # y: 6832x: 9578time: 1
     fsspec_files = [s3.open(file_name, **fsspec_params) for file_name in file_names]
     datasets = xr.open_mfdataset(fsspec_files,
                                  join='exact',
                                  data_vars='different',
-                                chunks='auto',
+                                # chunks='auto',
+                                chunks={}
                                  concat_dim='time',
-                                 combine="nested", 
-                                engine="h5netcdf",
+                                 combine="nested",
+                                engine='h5netcdf',
                                  parallel=True,
-                                
+                                drop_variables=[
+        "time",
+        'corrections', 
+        'Conventions',
+        'identification',
+        'metadata',
+        "connected_component_labels",
+    ],
                                 #  combine="by_coords", coords='all', engine="h5netcdf", 
                                 preprocess=preprocess,
-                                # kwargs=driver_params
                                 driver_kwds = driver_params
     )
     return datasets
