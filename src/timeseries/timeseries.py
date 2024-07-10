@@ -39,7 +39,7 @@ def _read_layers_at_pixel(dataset: xr.Dataset, x: float, y: float) -> xr.Dataset
     # reprojects lon lat to dataset projection, returns dict with reading at each layer
     crs = get_crs(dataset)
     xx, yy = _to_crs(x, y, target_proj=crs.to_epsg())
-    return dataset[["unwrapped_phase", "interferometric_correlation", "temporal_coherence"]].sel(x=xx, y=yy, method="nearest", drop=True)
+    return dataset[["unwrapped_phase", "interferometric_correlation", "temporal_coherence", "time"]].sel(x=xx, y=yy, method="nearest", drop=True)
 
 
 def _to_crs(x, y, source_proj='4326', target_proj='32610'): # EPSG:3857 (formerly 32610)

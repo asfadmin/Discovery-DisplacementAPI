@@ -1,0 +1,7 @@
+# Contents of pytest-config.yml
+test_types:
+
+- For running Timeseries tests:
+    required_in_title: timeseries
+    required_keys: ["params", "response"]
+    method: test_timeseries

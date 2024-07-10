@@ -10,9 +10,10 @@ from mangum import Mangum
 from pydantic import BaseModel
 from src.models import DriverKeywords, FsspecParams, TimeSeriesModel
 from src.timeseries import get_timeseries_at_pixel, layer_types
-from src.HDF import open_dataset, datasets_path, read_layer_as_png_buffer, get_wkt_from_dataset
+from src.HDF import read_layer_as_png_buffer
 import s3fs
 from . import log_router
+from time import time
 router = APIRouter(route_class=log_router.LoggingRoute)
 app = FastAPI()
 
@@ -64,7 +65,10 @@ def get_timeseries(series: TimeSeriesModel):
     x = series.x
     y = series.y
     files = series.files
-    from time import time
+
+    if len(files) == 0:
+        raise HTTPException(400, 'Value Error: Received empty list for "files" parameter, please provide list of s3 URIs')
+    
     perf = time()
     # d = open_datasets(files, 'unwrapped_phase') # group not found for some reason
     perf = time() - perf
@@ -73,7 +77,12 @@ def get_timeseries(series: TimeSeriesModel):
         series.fsspec_params = FsspecParams()
     if series.driver_kwds is None:
         series.driver_kwds = DriverKeywords()
-    values, averages = get_timeseries_at_pixel(x=x,y=y, file_stack=[file for file in files], fsspec_params=series.fsspec_params, driver_config=series.driver_kwds)
+    
+    try:
+        values, averages = get_timeseries_at_pixel(x=x,y=y, file_stack=[file for file in files], fsspec_params=series.fsspec_params, driver_config=series.driver_kwds)
+    except BaseException as exc:
+        raise HTTPException(500, f'Failed to calculate timeseries. Original Exception: {exc}')
+    
     output = json.loads(values)
     output['averages'] = averages
     return Response(content=json.dumps(output), media_type='application/json', headers=DEFAULT_HEADERS)

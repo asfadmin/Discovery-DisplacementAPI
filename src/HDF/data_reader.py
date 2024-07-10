@@ -57,7 +57,6 @@ def open_datasets(file_names: list[str], fsspec_params: FsspecParams, driver_par
         engine='h5netcdf',
         parallel=True,
         drop_variables=[
-            "time",
             'corrections', 
             'Conventions',
             'identification',

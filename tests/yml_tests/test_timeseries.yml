@@ -1,0 +1,42 @@
+tests:
+- test timeseries stack 1 file:
+    params:
+        files: [
+            "s3://kfbx-opera-disp-test-bucket/20221107_20221213.unw.nc"
+        ]
+        x: 38.57
+        y: -121.53
+    response:
+        status_code: 200
+
+- test timeseries stack 3 files:
+    params:
+        files: [
+            "s3://kfbx-opera-disp-test-bucket/20221107_20221213.unw.nc",
+            "s3://kfbx-opera-disp-test-bucket/20221107_20230106.unw.nc",
+            "s3://kfbx-opera-disp-test-bucket/20221107_20230130.unw.nc",
+        ]
+        x: 38.57
+        y: -121.53
+    response:
+        status_code: 200
+
+- test timeseries stack 3 files out-of-bounds lat lon:
+    params:
+        files: [
+            "s3://kfbx-opera-disp-test-bucket/20221107_20221213.unw.nc",
+            "s3://kfbx-opera-disp-test-bucket/20221107_20230106.unw.nc",
+            "s3://kfbx-opera-disp-test-bucket/20221107_20230130.unw.nc",
+        ]
+        x: 0
+        y: 0
+    response:
+        status_code: 200
+
+- test timeseries empty files:
+    params:
+        files: []
+        x: 0.0
+        y: 0.0
+    response:
+        status_code: 400
