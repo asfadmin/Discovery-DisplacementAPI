@@ -1,5 +1,6 @@
 import logging
 import os
+from typing import Optional
 from fastapi import HTTPException
 import numpy as np
 import rasterio
@@ -8,21 +9,66 @@ import numpy.typing as npt
 
 import io
 from PIL import Image
+# from fsspec.implementations.local import S3FileSystem
+from s3fs.core import S3FileSystem
 
-
+from src.models import DriverKeywords, FsspecParams
 cwd = os.getcwd()
 test_path = os.path.join(cwd, 'tests')
 datasets_path = os.path.join(test_path, "./sample_products")
 
-def open_dataset(file_name: str, group: str = None) -> xr.Dataset:
+def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
+    # https://docs.aws.amazon.com/sdk-for-go/api/aws/credentials/endpointcreds/
+    s3 = S3FileSystem()
+    p = FsspecParams().model_dump()
+    fsspec_file = s3.open(file_name, **p)
     try:
         logging.debug(msg=f'Reading "{file_name}"{"" if group is None else "Group: " + group} into dataset')
-        data = xr.open_dataset(os.path.join(datasets_path, file_name),group=group)
+        # https://filesystem-spec.readthedocs.io/en/latest/
+        # https://docs.xarray.dev/en/stable/user-guide/io.html#cloud-storage-buckets
+        data = xr.open_dataset(
+            fsspec_file, # type: ignore
+            group=group,
+            engine="h5netcdf",
+            chunks={},
+            driver_kwds=DriverKeywords().model_dump()
+        )
     except Exception as e:
         raise HTTPException(400, f"Failed to read field name {file_name}: {e}")
     
     logging.debug(msg=f'"{file_name}" read into dataset!')
     return data
+
+def open_datasets(file_names: list[str], fsspec_params: FsspecParams, driver_params: DriverKeywords, preprocess=None) -> xr.Dataset:
+    s3 = S3FileSystem()
+
+    # Implements example from Luis López using fsspec_params and driver_config
+    # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
+
+    fsspec_files = [s3.open(file_name, mode='rb', **fsspec_params.model_dump()) for file_name in file_names]
+    datasets = xr.open_mfdataset(
+        fsspec_files, # type: ignore
+        join='exact',
+        data_vars='different',
+        # chunks='auto',
+        chunks={},
+        concat_dim='time',
+        combine="nested",
+        engine='h5netcdf',
+        parallel=True,
+        drop_variables=[
+            "time",
+            'corrections', 
+            'Conventions',
+            'identification',
+            'metadata',
+            "connected_component_labels",
+        ],
+        preprocess=preprocess,
+        driver_kwds = driver_params.model_dump()
+    )
+
+    return datasets
 
 def read_layer_as_png_buffer(file_name: str, layer: str) -> io.BytesIO:
     data = open_dataset(file_name=file_name)
@@ -40,13 +86,13 @@ def read_layer_as_png_buffer(file_name: str, layer: str) -> io.BytesIO:
 
     io_buffer = io.BytesIO()
 
-    logging.debug(msg=f'"writing layer to bytes buffer as jpeg')
+    logging.debug(msg='writing layer to bytes buffer as jpeg')
     img.save(io_buffer, format="png")
-    logging.debug(msg=f'"layer written to buffer!')
+    logging.debug(msg='layer written to buffer!')
     
     return io_buffer
 
-def get_wkt_from_dataset(data: xr.DataArray, identification: xr.DataArray):
+def get_wkt_from_dataset(data: xr.Dataset | xr.DataArray, identification: xr.Dataset | xr.DataArray):
     wkt = str(identification.variables['bounding_polygon'].data)
     epsg = str(get_crs(data).to_epsg())
     logging.debug(msg=f"Got epsg {epsg} from crs")
@@ -54,9 +100,9 @@ def get_wkt_from_dataset(data: xr.DataArray, identification: xr.DataArray):
     return {'wkt': wkt, 'epsg': epsg}
 
 def get_crs(data):
-    logging.debug(msg=f'Reading crs')
+    logging.debug(msg='Reading crs')
     spatial_ref = data.variables['spatial_ref']
-    crs = rasterio.crs.CRS.from_string(spatial_ref.attrs['crs_wkt'])
+    crs = rasterio.crs.CRS.from_string(spatial_ref.attrs['crs_wkt']) # type: ignore
     logging.debug(msg=f'Read crs from data: {str(crs)}')
     return crs
 
