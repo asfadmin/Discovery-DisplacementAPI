@@ -60,18 +60,15 @@ def get_wkt():
     }, headers=DEFAULT_HEADERS)
 
 @app.post("/timeseries", description='Returns a json response with values read at "unwrapped_phase", "interferometric_correlation", and "temporal_coherence" layers in provided files at given point')
-def get_timeseries(series: TimeSeriesModel):
+async def get_timeseries(series: TimeSeriesModel):
     # epsg: 32610
-    lat = series.lat # lon
-    lon = series.lon # lat
+    lat = series.lat
+    lon = series.lon
     files = series.files
 
     if len(files) == 0:
         raise HTTPException(400, 'Value Error: Received empty list for "files" parameter, please provide list of s3 URIs')
     
-    perf = time()
-    # d = open_datasets(files, 'unwrapped_phase') # group not found for some reason
-    perf = time() - perf
     logging.debug(f'Sampling timeseries at lat {lat}, lon {lon}')
     if series.fsspec_params is None:
         series.fsspec_params = FsspecParams()
@@ -81,6 +78,6 @@ def get_timeseries(series: TimeSeriesModel):
     try:
         output_str = get_timeseries_at_pixel(lat=lat,lon=lon, file_stack=[file for file in files], fsspec_params=series.fsspec_params, driver_config=series.driver_kwds)
     except BaseException as exc:
-        raise HTTPException(500, f'Failed to calculate timeseries. Original Exception: {exc}')
+        raise HTTPException(500, detail=f'Failed to calculate timeseries. Original Exception: {exc}')
     
     return Response(content=output_str, media_type='application/json', headers=DEFAULT_HEADERS)
