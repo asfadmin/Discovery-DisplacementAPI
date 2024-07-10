@@ -13,8 +13,8 @@ class FsspecParams(BaseModel):
 
 class TimeSeriesModel(BaseModel):
     files: list[str]
-    x: float = 0.0
-    y: float = 0.0
+    lon: float = 0.0 # x
+    lat: float = 0.0 # y
     
     # for open_mfdataset and fsspec, are key points of optimization
     driver_kwds: Optional[DriverKeywords] = DriverKeywords() # passed along to the engine open_mfdataset uses (h5netcdf)

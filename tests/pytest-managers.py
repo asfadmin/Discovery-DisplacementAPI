@@ -41,8 +41,8 @@ def test_timeseries(**args) -> None:
     expected_response = test_info['response']
 
     files = params['files']
-    x = params['x']
-    y = params['y']
+    lat = params['lat']
+    lon = params['lon']
 
     status_code = expected_response['status_code']
 
@@ -56,8 +56,8 @@ def test_timeseries(**args) -> None:
         driver_keywords = driver_kwds
 
     test_data = {
-        "x": x,
-        "y": y,
+        "lat": lat,
+        "lon": lon,
         "files": files,
         "fsspec_params": fsspec_params,
         'driver_keywords': driver_keywords
@@ -72,6 +72,10 @@ def test_timeseries(**args) -> None:
             raise Exception(f'timeseries endpoint failed. Reason: {exc}')
     else:
         assert response.status_code == status_code
+    
+    expected_output = expected_response.get('expected_output')
+    
+    if expected_output is not None:
+        body = response.json()
 
-    body = response.json()
-
+        assert body == expected_output
