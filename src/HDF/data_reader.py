@@ -20,17 +20,19 @@ datasets_path = os.path.join(test_path, "./sample_products")
 def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
     # https://docs.aws.amazon.com/sdk-for-go/api/aws/credentials/endpointcreds/
     s3 = S3FileSystem()
-    fsspec_file = s3.open(file_name)
+    p = FsspecParams().model_dump()
+    fsspec_file = s3.open(file_name, **p)
     try:
         logging.debug(msg=f'Reading "{file_name}"{"" if group is None else "Group: " + group} into dataset')
         # https://filesystem-spec.readthedocs.io/en/latest/
         # https://docs.xarray.dev/en/stable/user-guide/io.html#cloud-storage-buckets
-        data = xr.open_dataset(fsspec_file,group=group, # type: ignore
-    # backend_kwargs={
-    #     "storage_options": {"project": "<project-name>", "token": None}
-    # },
-    engine="h5netcdf",
-    )
+        data = xr.open_dataset(
+            fsspec_file, # type: ignore
+            group=group,
+            engine="h5netcdf",
+            chunks={},
+            driver_kwds=DriverKeywords().model_dump()
+        )
     except Exception as e:
         raise HTTPException(400, f"Failed to read field name {file_name}: {e}")
     
