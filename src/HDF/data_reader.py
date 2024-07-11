@@ -1,11 +1,12 @@
 import logging
 import os
-from typing import Optional
+from typing import Optional, Tuple
 from fastapi import HTTPException
 import numpy as np
 import rasterio
 import xarray as xr
 import numpy.typing as npt
+from pathlib import Path
 
 import io
 from PIL import Image
@@ -39,13 +40,15 @@ def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
     logging.debug(msg=f'"{file_name}" read into dataset!')
     return data
 
-def open_datasets(file_names: list[str], fsspec_params: FsspecParams, driver_params: DriverKeywords, preprocess=None) -> xr.Dataset:
+def open_datasets(file_names: list[str], fsspec_params: FsspecParams, driver_params: DriverKeywords, preprocess=None) -> Tuple[xr.Dataset, list[Tuple[str, int]]]:
     s3 = S3FileSystem()
 
     # Implements example from Luis López using fsspec_params and driver_config
     # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
 
     fsspec_files = [s3.open(file_name, mode='rb', **fsspec_params.model_dump()) for file_name in file_names]
+    file_sizes = list(zip([Path(f).name for f in file_names], s3.sizes(file_names)))
+
     datasets = xr.open_mfdataset(
         fsspec_files, # type: ignore
         join='exact',
@@ -67,7 +70,7 @@ def open_datasets(file_names: list[str], fsspec_params: FsspecParams, driver_par
         driver_kwds = driver_params.model_dump()
     )
 
-    return datasets
+    return datasets, file_sizes
 
 def read_layer_as_png_buffer(file_name: str, layer: str) -> io.BytesIO:
     data = open_dataset(file_name=file_name)
