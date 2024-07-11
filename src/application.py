@@ -60,7 +60,7 @@ def get_wkt():
     }, headers=DEFAULT_HEADERS)
 
 @app.post("/timeseries", description='Returns a json response with values read at "unwrapped_phase", "interferometric_correlation", and "temporal_coherence" layers in provided files at given point')
-async def get_timeseries(series: TimeSeriesModel):
+def get_timeseries(series: TimeSeriesModel):
     # epsg: 32610
     lat = series.lat
     lon = series.lon
