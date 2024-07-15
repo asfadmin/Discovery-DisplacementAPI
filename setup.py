@@ -1,4 +1,5 @@
 """Discover-HDFReaderAPI setuptools configuration"""
+
 from setuptools import find_packages, setup
 
 requirements = [
@@ -7,7 +8,7 @@ requirements = [
     "numpy",
     "xarray",
     "rasterio",
-    "python-json-logger"
+    "python-json-logger",
 ]
 
 with open("README.md", "r") as readme_file:
@@ -22,17 +23,15 @@ setup(
     long_description=readme,
     long_description_content_type="text/markdown",
     # url="https://github.com/asfadmin/Discovery-asf_search.git",
-    project_urls={
-        'Documentation': 'https://docs.asf.alaska.edu/asf_search/basics/'
-    },
+    project_urls={"Documentation": "https://docs.asf.alaska.edu/asf_search/basics/"},
     packages=find_packages(exclude=["tests.*", "tests", "examples.*", "examples"]),
-    package_dir={'OperaTimeseriesAPI': 'src'},
+    package_dir={"OperaTimeseriesAPI": "src"},
     include_package_data=True,
-    python_requires='>=3.8',
+    python_requires=">=3.8",
     install_requires=requirements,
     # extras_require={ "test": test_requirements, "extras": extra_requirements},
-    license='BSD',
-    license_files=('LICENSE',),
+    license="BSD",
+    license_files=("LICENSE",),
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "License :: OSI Approved :: BSD License",
@@ -47,6 +46,6 @@ setup(
         "Topic :: Scientific/Engineering :: Atmospheric Science",
         "Topic :: Scientific/Engineering :: GIS",
         "Topic :: Scientific/Engineering :: Hydrology",
-        "Topic :: Utilities"
+        "Topic :: Utilities",
     ],
 )

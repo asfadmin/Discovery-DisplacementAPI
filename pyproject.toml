@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+fix = true
+
+[tool.ruff.format]
+# Prefer single quotes over double quotes.
+quote-style = "single"
