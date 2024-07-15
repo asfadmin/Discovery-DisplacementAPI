@@ -1,4 +1,3 @@
-
 from typing import Callable
 import time
 import logging
@@ -17,7 +16,7 @@ class LoggingRoute(APIRoute):
     """
 
     old_factory = logging.getLogRecordFactory()
-    aws_request_id = ""
+    aws_request_id = ''
 
     def record_factory(self, *args, **kwargs):
         """
@@ -40,7 +39,7 @@ class LoggingRoute(APIRoute):
 
         async def custom_route_handler(request: Request) -> Response:
             # Grab the AWS UUID and set it for every log:
-            context = request.scope.get("aws.context")
+            context = request.scope.get('aws.context')
             if context is not None:
                 self.aws_request_id = context.aws_request_id
             logging.setLogRecordFactory(self.record_factory)
@@ -52,22 +51,22 @@ class LoggingRoute(APIRoute):
                 # What to ALWAYS log:
                 duration = time.time() - before
                 api_logger.info(
-                    "Query finished running.",
+                    'Query finished running.',
                     extra={
-                        "QueryTime": duration,
-                        "QueryParams": dict(request.query_params),
-                        "Endpoint": request.scope['path'],
-                    }
+                        'QueryTime': duration,
+                        'QueryParams': dict(request.query_params),
+                        'Endpoint': request.scope['path'],
+                    },
                 )
             # What to log if the query was successful:
             api_logger.info(
-                "Query was successful!",
+                'Query was successful!',
                 extra={
-                    "media_type": response.media_type,
-                }
+                    'media_type': response.media_type,
+                },
             )
             # An example on adding headers. IDK if we actually need this one:
-            response.headers["X-Response-Time"] = str(duration)
+            response.headers['X-Response-Time'] = str(duration)
             return response
 
         return custom_route_handler
