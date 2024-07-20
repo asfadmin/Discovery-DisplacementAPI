@@ -1,13 +1,16 @@
 import logging
 import os
+import pathlib
 from typing import Optional, Tuple
 from fastapi import HTTPException
+import fsspec
 import numpy as np
 import rasterio
 import xarray as xr
 import numpy.typing as npt
 from pathlib import Path
 
+import ujson
 import io
 from PIL import Image
 
@@ -15,6 +18,8 @@ from PIL import Image
 from s3fs.core import S3FileSystem
 
 from src.models import DriverKeywords, FsspecParams
+from kerchunk.hdf import SingleHdf5ToZarr
+from kerchunk.combine import MultiZarrToZarr
 
 cwd = os.getcwd()
 test_path = os.path.join(cwd, 'tests')
@@ -133,3 +138,49 @@ def _normalize(data: npt.NDArray) -> npt.NDArray:
 
     # normalize
     return (data - lower) / ptp
+
+
+def kerchunkify_stack(uris: list[str]) -> bytes:
+    s3 = S3FileSystem()
+    storage_options = dict(
+        mode='rb',
+        anon=False,
+        default_fill_cache=False,
+        default_cache_type='first',
+        block_size=24 * 1024 * 1024,
+    )  # could be bigger)
+    fs2 = fsspec.filesystem('')
+
+    file_names = []
+    for uri in uris:
+        file_names.append(kerchunkify_file(s3, fs2, uri, storage_options))
+
+    return _merge_kerchunks(file_names, storage_options)
+
+
+def kerchunkify_file(
+    s3_file_system: S3FileSystem, local_file_system, file_uri: str, storage_options: dict
+) -> str:
+    with s3_file_system.open(file_uri, **storage_options) as infile:
+        h5chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=500)
+        outf = f'{pathlib.Path(file_uri).name}.json'
+        with local_file_system.open(outf, 'wb') as f:
+            f.write(ujson.dumps(h5chunks.translate()).encode())
+
+        return outf
+
+
+def _merge_kerchunks(files: list[str], storage_options) -> bytes:
+    mzz = MultiZarrToZarr(
+        files,
+        target_options=storage_options,
+        concat_dims=['time'],
+        identical_dims=['y', 'x'],
+        coo_map={
+            'time': 'cf:time'  # THIS KEEPS TIME FROM BEING DROPPED:
+        },  # https://github.com/fsspec/kerchunk/issues/343#issuecomment-1666289741
+    )
+
+    d = mzz.translate()
+
+    return ujson.dumps(d).encode()

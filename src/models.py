@@ -25,3 +25,7 @@ class TimeSeriesModel(BaseModel):
         DriverKeywords()
     )  # passed along to the engine open_mfdataset uses (h5netcdf)
     fsspec_params: Optional[FsspecParams] = FsspecParams()  # used when opening s3 files by s3fs
+
+
+class KerchunkStackModel(BaseModel):
+    files: list[str]

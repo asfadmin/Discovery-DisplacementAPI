@@ -7,7 +7,8 @@ import logging
 from fastapi.responses import JSONResponse
 from mangum import Mangum
 from pydantic import BaseModel
-from src.models import DriverKeywords, FsspecParams, TimeSeriesModel
+from src.HDF.data_reader import kerchunkify_stack
+from src.models import DriverKeywords, FsspecParams, KerchunkStackModel, TimeSeriesModel
 from src.timeseries import get_timeseries_at_pixel, layer_types
 from src.HDF import read_layer_as_png_buffer
 import s3fs
@@ -121,3 +122,25 @@ def get_timeseries(series: TimeSeriesModel):
         )
 
     return Response(content=output_str, media_type='application/json', headers=DEFAULT_HEADERS)
+
+
+@app.post(
+    '/kerchunk_stack',
+    description='Returns a json zarr store bytes',
+)
+def kerchunk_stack(KerchunkArgs: KerchunkStackModel):
+    try:
+        bytes_output = kerchunkify_stack(KerchunkArgs.files)
+    except BaseException as exc:
+        raise HTTPException(
+            500,
+            detail=f'Failed to kerchunkify the provided stack of files. Original Exception: {exc}',
+        )
+
+    return Response(
+        content=bytes_output,
+        headers={
+            **DEFAULT_HEADERS,
+        },
+        media_type='application/json',
+    )
