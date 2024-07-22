@@ -163,8 +163,8 @@ def kerchunkify_file(
 ) -> str:
     with s3_file_system.open(file_uri, **storage_options) as infile:
         h5chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=500)
-        outf = f'{pathlib.Path(file_uri).name}.json'
-        with local_file_system.open(outf, 'wb') as f:
+        outf = f'/tmp/{pathlib.Path(file_uri).name}.json'
+        with local_file_system.open(f'{outf}', 'wb') as f:
             f.write(ujson.dumps(h5chunks.translate()).encode())
 
         return outf
