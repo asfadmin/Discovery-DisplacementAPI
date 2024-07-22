@@ -11,3 +11,6 @@ Pillow
 pyproj
 fsspec[s3] # for s3 file access
 mangum
+kerchunk
+ujson
+# aws-cdk-lib
