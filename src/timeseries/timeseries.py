@@ -29,12 +29,13 @@ def get_timeseries_at_pixel(
         fsspec_params=fsspec_params,
         driver_params=driver_config,
     )
+    values = _read_layers_at_pixel(values, lat, lon)
 
     meta = DataFrame(file_meta, columns=['fileName', 'bytes'])
     pandas_values = values.to_pandas()
-    pandas_values = pandas_values.assign(
-        fileName=meta['fileName'].values, bytes=meta['bytes'].values
-    )
+    # pandas_values = pandas_values.assign(
+    #     fileName=meta['fileName'].values, bytes=meta['bytes'].values
+    # )
 
     # sort by time, make fileName column the index for our data for nicer json output
     pandas_values = pandas_values.sort_index().reset_index().set_index('fileName')

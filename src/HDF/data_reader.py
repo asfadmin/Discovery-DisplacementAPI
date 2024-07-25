@@ -62,33 +62,55 @@ def open_datasets(
     # Implements example from Luis López using fsspec_params and driver_config
     # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
 
-    fsspec_files = [
-        s3.open(file_name, mode='rb', **fsspec_params.model_dump()) for file_name in file_names
-    ]
     file_sizes = list(zip([Path(f).name for f in file_names], s3.sizes(file_names)))
+    fs = fsspec.filesystem(
+        'reference',
+        fo=file_names[0],
+        remote_protocol='s3',
+        # remote_options={"anon":True},
+        skip_instance_cache=True,
+        anon=False,
+        default_fill_cache=False,
+        default_cache_type='first',
+        block_size=24 * 1024 * 1024,
+    )
+    m = fs.get_mapper('')
 
-    datasets = xr.open_mfdataset(
-        fsspec_files,  # type: ignore
-        join='exact',
-        data_vars='different',
-        # chunks='auto',
-        chunks={},
-        concat_dim='time',
-        combine='nested',
-        engine='h5netcdf',
-        parallel=True,
-        drop_variables=[
-            'corrections',
-            'Conventions',
-            'identification',
-            'metadata',
-            'connected_component_labels',
-        ],
-        preprocess=preprocess,
-        driver_kwds=driver_params.model_dump(),
+    dataset = xr.open_dataset(
+        m,
+        engine='zarr',
+        # storage_options=dict(
+        #     remote_protocol='s3',
+        #     # mode='rb',
+        #     anon=False,
+        #     default_fill_cache=False,
+        #     default_cache_type='first',
+        #     block_size=24 * 1024 * 1024,
+        # ),
     )
 
-    return datasets, file_sizes
+    # datasets = xr.open_mfdataset(
+    #     fsspec_files,  # type: ignore
+    #     join='exact',
+    #     data_vars='different',
+    #     # chunks='auto',
+    #     chunks={},
+    #     concat_dim='time',
+    #     combine='nested',
+    #     engine='h5netcdf',
+    #     parallel=True,
+    #     drop_variables=[
+    #         'corrections',
+    #         'Conventions',
+    #         'identification',
+    #         'metadata',
+    #         'connected_component_labels',
+    #     ],
+    #     preprocess=preprocess,
+    #     driver_kwds=driver_params.model_dump(),
+    # )
+
+    return dataset, file_sizes
 
 
 def read_layer_as_png_buffer(file_name: str, layer: str) -> io.BytesIO:
@@ -142,35 +164,49 @@ def _normalize(data: npt.NDArray) -> npt.NDArray:
 
 def kerchunkify_stack(uris: list[str]) -> bytes:
     s3 = S3FileSystem()
-    storage_options = dict(
-        mode='rb',
-        anon=False,
-        default_fill_cache=False,
-        default_cache_type='first',
-        block_size=24 * 1024 * 1024,
-    )  # could be bigger)
-    fs2 = fsspec.filesystem('')
-
     file_names = []
+    local_file_system = fsspec.filesystem('')
     for uri in uris:
-        file_names.append(kerchunkify_file(s3, fs2, uri, storage_options))
+        
+        h5_str = kerchunkify_file(file_uri=uri, s3_file_system=s3)
+        outf = f'{pathlib.Path(uri).name}.json'
+        with local_file_system.open(outf, 'wb') as f:
+            f.write(h5_str)
+        file_names.append(outf)
 
-    return _merge_kerchunks(file_names, storage_options)
+    return _merge_kerchunks(file_names)
 
 
 def kerchunkify_file(
-    s3_file_system: S3FileSystem, local_file_system, file_uri: str, storage_options: dict
-) -> str:
+    file_uri: str,
+    s3_file_system: S3FileSystem = S3FileSystem(),
+    storage_options: dict = {
+        'mode': 'rb',
+        'anon': False,
+        'default_fill_cache': False,
+        'default_cache_type': 'first',
+        'default_block_size': 128*128,
+    },
+) -> bytes:
     with s3_file_system.open(file_uri, **storage_options) as infile:
-        h5chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=500)
-        outf = f'/tmp/{pathlib.Path(file_uri).name}.json'
-        with local_file_system.open(f'{outf}', 'wb') as f:
-            f.write(ujson.dumps(h5chunks.translate()).encode())
+        h5chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=300)
 
-        return outf
+        # with local_file_system.open(outf, 'wb') as f:
+        #     f.write(ujson.dumps(h5chunks.translate()).encode())
+
+        return ujson.dumps(h5chunks.translate()).encode()
 
 
-def _merge_kerchunks(files: list[str], storage_options) -> bytes:
+def _merge_kerchunks(
+    files: list[str],
+    storage_options: dict = {
+        'mode': 'rb',
+        'anon': False,
+        'default_fill_cache': False,
+        'default_cache_type': 'first',
+        'block_size': 24 * 1024 * 1024,
+    },
+) -> bytes:
     mzz = MultiZarrToZarr(
         files,
         target_options=storage_options,

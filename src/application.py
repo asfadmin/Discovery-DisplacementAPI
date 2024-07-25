@@ -1,23 +1,31 @@
 import json
+from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, HTTPException, Response
 
 import logging
 
 from fastapi.responses import JSONResponse
-from mangum import Mangum
+
+# from mangum import Mangum
 from pydantic import BaseModel
-from src.HDF.data_reader import kerchunkify_stack
-from src.models import DriverKeywords, FsspecParams, KerchunkStackModel, TimeSeriesModel
+from src.HDF.data_reader import kerchunkify_file, kerchunkify_stack
+from src.models import (
+    DriverKeywords,
+    FsspecParams,
+    KerchunkFileModel,
+    KerchunkStackModel,
+    TimeSeriesModel,
+)
 from src.timeseries import get_timeseries_at_pixel, layer_types
 from src.HDF import read_layer_as_png_buffer
 import s3fs
+import ujson
 from . import log_router
 
 router = APIRouter(route_class=log_router.LoggingRoute)
 app = FastAPI()
 
-lambda_handler = Mangum(app)
 DEFAULT_HEADERS = {
     'Access-Control-Allow-Origin': '*',
 }
@@ -143,4 +151,41 @@ def kerchunk_stack(KerchunkArgs: KerchunkStackModel):
             **DEFAULT_HEADERS,
         },
         media_type='application/json',
+    )
+
+
+@app.post(
+    '/kerchunk_file',
+    description='Returns a json zarr store bytes',
+)
+def kerchunk_file(KerchunkArgs: KerchunkFileModel):
+    s3_str = KerchunkArgs.file_uri.unicode_string()
+    destination_str = KerchunkArgs.destination.unicode_string()
+    try:
+        zarr_store = kerchunkify_file(s3_str)
+    except BaseException as exc:
+        raise HTTPException(
+            500,
+            detail=f'Failed to kerchunkify the provided file. Original Exception: {exc}',
+        )
+    s3 = s3fs.S3FileSystem()
+
+    if KerchunkArgs.destination_filename is None:
+        destination = f'{destination_str}{Path(s3_str).name}.json'
+    else:
+        destination = f'{destination_str}{KerchunkArgs.destination_filename}'
+        if not destination.endswith('.json'):
+            destination += '.json'
+
+    try:
+        with s3.open(destination, 'wb') as f:
+            f.write(zarr_store)  # type: ignore
+    except BaseException as e:
+        raise HTTPException(
+            500,
+            detail=f'Failed to write zarr store to destination {destination}. Original Exception: {e}',
+        )
+
+    return Response(
+        content=ujson.dumps({'file_uri': destination}), headers=DEFAULT_HEADERS, media_type='application/json'
     )

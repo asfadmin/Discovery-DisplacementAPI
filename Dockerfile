@@ -1,16 +1,24 @@
-FROM public.ecr.aws/lambda/python:3.12
+FROM public.ecr.aws/docker/library/python:3.12-slim
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.3 /lambda-adapter /opt/extensions/lambda-adapter
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+ENV PORT=8080
 
-WORKDIR /code
-COPY ./requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
+COPY ./src/requirements.txt ./
+# RUN pip install uv
+RUN uv pip install --system --no-cache-dir --upgrade -r ./requirements.txt
 
 COPY README.md ./README.md
-COPY setup.py ./setup.py
-COPY ./src /code/src
-RUN python3 -m pip install -U --no-cache-dir .
 
-ENV OPEN_TO_IP="127.0.0.1"
-ENV OPEN_TO_PORT=9000
-EXPOSE ${OPEN_TO_PORT}
+COPY ./src ./src
 
-ENTRYPOINT [ "python3", "code/src/application.py" ]
+# COPY setup.py /code/
+
+# EXPOSE 80
+
+# ENTRYPOINT [ "python3", "code/src/application.py" ]
+
+LABEL maintainer="Alaska Satellite Facility Discovery Team <uaf-asf-discovery@alaska.edu>"
+
+CMD exec uvicorn --port=$PORT src.application:app
+# CMD ["src.application.lambda_handler"]
+# CMD ["uvicorn", "application:app", "--host", "0.0.0.0", "--port", "8080"]

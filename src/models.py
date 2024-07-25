@@ -1,5 +1,6 @@
-from typing import Optional
-from pydantic import BaseModel
+from typing import Annotated, Optional
+from pydantic import BaseModel, UrlConstraints
+from pydantic_core import Url
 
 
 class DriverKeywords(BaseModel):
@@ -25,6 +26,14 @@ class TimeSeriesModel(BaseModel):
         DriverKeywords()
     )  # passed along to the engine open_mfdataset uses (h5netcdf)
     fsspec_params: Optional[FsspecParams] = FsspecParams()  # used when opening s3 files by s3fs
+
+
+class KerchunkFileModel(BaseModel):
+    file_uri: Annotated[Url, UrlConstraints(allowed_schemes=['s3'])]
+    destination: Annotated[Url, UrlConstraints(allowed_schemes=['s3'])] # = Field(pattern=r'(s3:\/\/)(\S|\/)*\/')
+    destination_filename: Optional[
+        str
+    ] = None
 
 
 class KerchunkStackModel(BaseModel):
