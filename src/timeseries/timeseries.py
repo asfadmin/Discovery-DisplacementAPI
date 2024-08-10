@@ -1,11 +1,11 @@
-from functools import partial
+
 
 # import rasterio
-from src.HDF.data_reader import open_datasets, get_crs
+from src.HDF.data_reader import open_zarr_store, get_crs
 from pyproj import CRS, Transformer
 import xarray as xr
 from src.models import DriverKeywords, FsspecParams
-from pandas import DataFrame
+# from pandas import DataFrame
 
 layer_types = ['unwrapped_phase', 'interferometric_correlation', 'temporal_coherence']
 
@@ -18,27 +18,25 @@ _data_variables = [
 def get_timeseries_at_pixel(
     lat: float,
     lon: float,
-    file_stack: list[str],
+    file_store: str,
     fsspec_params: FsspecParams,
     driver_config: DriverKeywords,
 ) -> str:
-    _read_partial_pixels_at_layers = partial(_read_layers_at_pixel, lat=lat, lon=lon)
-    values, file_meta = open_datasets(
-        file_names=file_stack,
-        preprocess=_read_partial_pixels_at_layers,
+    values = open_zarr_store(
+        file_store=file_store,
         fsspec_params=fsspec_params,
         driver_params=driver_config,
     )
     values = _read_layers_at_pixel(values, lat, lon)
 
-    meta = DataFrame(file_meta, columns=['fileName', 'bytes'])
+    # meta = DataFrame(file_meta, columns=['fileName', 'bytes'])
     pandas_values = values.to_pandas()
     # pandas_values = pandas_values.assign(
     #     fileName=meta['fileName'].values, bytes=meta['bytes'].values
     # )
 
     # sort by time, make fileName column the index for our data for nicer json output
-    pandas_values = pandas_values.sort_index().reset_index().set_index('fileName')
+    # pandas_values = pandas_values.sort_index().reset_index().set_index('fileName')
     pandas_values.loc['mean'] = pandas_values.mean(skipna=True, numeric_only=True)
     pandas_json = pandas_values.to_json(date_format='iso', orient='index')
     return pandas_json

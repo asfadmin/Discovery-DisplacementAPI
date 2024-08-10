@@ -16,11 +16,14 @@ from src.models import (
     KerchunkFileModel,
     KerchunkStackModel,
     TimeSeriesModel,
+    WKTModel,
 )
 from src.timeseries import get_timeseries_at_pixel, layer_types
 from src.HDF import read_layer_as_png_buffer
 import s3fs
 import ujson
+
+import asf_search as asf
 from . import log_router
 
 router = APIRouter(route_class=log_router.LoggingRoute)
@@ -102,13 +105,7 @@ def get_timeseries(series: TimeSeriesModel):
     # epsg: 32610
     lat = series.lat
     lon = series.lon
-    files = series.files
-
-    if len(files) == 0:
-        raise HTTPException(
-            400,
-            'Value Error: Received empty list for "files" parameter, please provide list of s3 URIs',
-        )
+    file_store = series.file_store
 
     logging.debug(f'Sampling timeseries at lat {lat}, lon {lon}')
     if series.fsspec_params is None:
@@ -120,7 +117,7 @@ def get_timeseries(series: TimeSeriesModel):
         output_str = get_timeseries_at_pixel(
             lat=lat,
             lon=lon,
-            file_stack=[file for file in files],
+            file_store=file_store,
             fsspec_params=series.fsspec_params,
             driver_config=series.driver_kwds,
         )
@@ -145,11 +142,23 @@ def kerchunk_stack(KerchunkArgs: KerchunkStackModel):
             detail=f'Failed to kerchunkify the provided stack of files. Original Exception: {exc}',
         )
 
+    destination_bucket = KerchunkArgs.destination_bucket
+    filename = '11114.json'
+
+    s3 = s3fs.S3FileSystem()
+    try:
+        destination = f'{destination_bucket}{filename}'
+        with s3.open(destination, 'wb') as f:
+            f.write(bytes_output)  # type: ignore
+    except BaseException as e:
+        raise HTTPException(
+            500,
+            detail=f'Failed to write zarr store to destination {destination}. Original Exception: {e}',
+        )
+
     return Response(
-        content=bytes_output,
-        headers={
-            **DEFAULT_HEADERS,
-        },
+        content=ujson.dumps({'file_uri': destination}),
+        headers=DEFAULT_HEADERS,
         media_type='application/json',
     )
 
@@ -187,5 +196,30 @@ def kerchunk_file(KerchunkArgs: KerchunkFileModel):
         )
 
     return Response(
-        content=ujson.dumps({'file_uri': destination}), headers=DEFAULT_HEADERS, media_type='application/json'
+        content=ujson.dumps({'file_uri': destination}),
+        headers=DEFAULT_HEADERS,
+        media_type='application/json',
     )
+
+
+@app.post(
+    '/get_frame_id',
+    description='Returns a json zarr store bytes',
+)
+def get_frame_ids(wkt_event: WKTModel):
+    wkt = wkt_event.wkt
+    try:
+        response = asf.search(intersectsWith=wkt, dataset=asf.DATASET.OPERA_S1, maxResults=250)
+    except asf.ASFSearchError as exc:
+        raise HTTPException(f'Failed to find frame(s) for given wkt. Reason: {exc}')
+
+    frame_ids = {
+        burst_id
+        for product in response
+        if (burst_id := product.properties.get('operaBurstID')) is not None
+    }
+
+    if len(frame_ids) == 0:
+        raise HTTPException(f'No OPERA-S1 burst frame ids were found over the given aoi: {wkt}')
+
+    return JSONResponse({'frame_ids': sorted(list(frame_ids)), 'wkt': wkt}, headers=DEFAULT_HEADERS)

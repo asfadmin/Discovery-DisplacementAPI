@@ -17,7 +17,8 @@ class FsspecParams(BaseModel):
 
 
 class TimeSeriesModel(BaseModel):
-    files: list[str]
+    # files: list[str]
+    file_store: str
     lon: float = 0.0
     lat: float = 0.0
 
@@ -38,3 +39,7 @@ class KerchunkFileModel(BaseModel):
 
 class KerchunkStackModel(BaseModel):
     files: list[str]
+    destination_bucket: str
+
+class WKTModel(BaseModel):
+    wkt: str
