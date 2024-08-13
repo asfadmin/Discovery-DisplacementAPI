@@ -7,6 +7,7 @@ import numpy as np
 import rasterio
 import xarray as xr
 import numpy.typing as npt
+import zarr
 from pathlib import Path
 
 import ujson
@@ -166,6 +167,11 @@ def kerchunkify_file(
 ) -> bytes:
     with s3_file_system.open(file_uri, **storage_options) as infile:
         h5chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=300)
+
+        # store uri and size of file at time of writing zarr store
+        zarr_store = zarr.open(h5chunks.store)
+        zarr_store.create_dataset('file_name', data=file_uri, dtype=str)
+        zarr_store.create_dataset('size', data=infile.size, dtype=float)
         return ujson.dumps(h5chunks.translate()).encode()
 
 
