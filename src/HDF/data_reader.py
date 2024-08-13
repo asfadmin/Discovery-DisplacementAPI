@@ -16,6 +16,7 @@ from PIL import Image
 
 # from fsspec.implementations.local import S3FileSystem
 from s3fs.core import S3FileSystem
+import zarr.hierarchy
 
 from src.models import DriverKeywords, FsspecParams
 from kerchunk.hdf import SingleHdf5ToZarr
@@ -68,7 +69,7 @@ def open_zarr_store(
         remote_protocol='s3',
         remote_options={
             'anon': False,
-            'default_fill_cache': True,
+            'default_fill_cache': False,
             'default_cache_type': 'blockcache',
             'skip_instance_cache': True,
             'default_block_size': 24 * 1024 * 1024,
@@ -78,7 +79,7 @@ def open_zarr_store(
     m = fs.get_mapper('')
 
     dataset = xr.open_dataset(
-        m, engine='zarr', backend_kwargs={'consolidated': False}, chunks='auto'
+        m, engine='zarr', backend_kwargs={'consolidated': False}, chunks={}
     )
     # dataset['file_name'] = dataset['file_name'].astype('unicode')
     # s3_files = [f'{bucket}/{fe.item()}' for fe in dataset['file_name']]
@@ -162,16 +163,18 @@ def kerchunkify_file(
         'anon': False,
         'default_fill_cache': False,
         'default_cache_type': 'first',
-        'default_block_size': 128 * 128,
+        'default_block_size': 1024 * 1024,
     },
 ) -> bytes:
     with s3_file_system.open(file_uri, **storage_options) as infile:
-        h5chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=300)
+        h5chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=300) # type: ignore (infile)
 
+        file_size = infile.size # type: ignore (infline.size)
+        
         # store uri and size of file at time of writing zarr store
-        zarr_store = zarr.open(h5chunks.store)
-        zarr_store.create_dataset('file_name', data=file_uri, dtype=str)
-        zarr_store.create_dataset('bytes', data=infile.size, dtype=float)
+        zarr_store = zarr.hierarchy.open_group(h5chunks.store)
+        zarr_store.create_dataset('uri', data=file_uri, dtype=str)
+        zarr_store.create_dataset('bytes', data=file_size, dtype=float)
         return ujson.dumps(h5chunks.translate()).encode()
 
 

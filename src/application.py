@@ -170,14 +170,14 @@ def kerchunk_stack(KerchunkArgs: KerchunkStackModel):
 def kerchunk_file(KerchunkArgs: KerchunkFileModel):
     s3_str = KerchunkArgs.file_uri.unicode_string()
     destination_str = KerchunkArgs.destination.unicode_string()
+    s3 = s3fs.S3FileSystem()
     try:
-        zarr_store = kerchunkify_file(s3_str)
+        zarr_store = kerchunkify_file(s3_str, s3_file_system=s3)
     except BaseException as exc:
         raise HTTPException(
             500,
             detail=f'Failed to kerchunkify the provided file. Original Exception: {exc}',
         )
-    s3 = s3fs.S3FileSystem()
 
     if KerchunkArgs.destination_filename is None:
         destination = f'{destination_str}{Path(s3_str).name}.json'
@@ -211,7 +211,9 @@ def get_frame_ids(wkt_event: WKTModel):
     try:
         response = asf.search(intersectsWith=wkt, dataset=asf.DATASET.OPERA_S1, maxResults=250)
     except asf.ASFSearchError as exc:
-        raise HTTPException(f'Failed to find frame(s) for given wkt. Reason: {exc}')
+        raise HTTPException(
+            status_code=500, detail=f'Failed to find frame(s) for given wkt. Reason: {exc}'
+        )
 
     frame_ids = {
         burst_id
@@ -220,6 +222,9 @@ def get_frame_ids(wkt_event: WKTModel):
     }
 
     if len(frame_ids) == 0:
-        raise HTTPException(f'No OPERA-S1 burst frame ids were found over the given aoi: {wkt}')
+        raise HTTPException(
+            status_code=400,
+            detail=f'No OPERA-S1 burst frame ids were found over the given aoi: {wkt}',
+        )
 
     return JSONResponse({'frame_ids': sorted(list(frame_ids)), 'wkt': wkt}, headers=DEFAULT_HEADERS)

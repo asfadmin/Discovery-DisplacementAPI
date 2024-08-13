@@ -7,11 +7,13 @@ import xarray as xr
 from src.models import DriverKeywords, FsspecParams
 # from pandas import DataFrame
 
-layer_types = ['unwrapped_phase', 'interferometric_correlation', 'temporal_coherence']
+layer_types = ['unwrapped_phase', 'interferometric_correlation', 'temporal_coherence', 'persistent_scatterer_mask']
 
 _data_variables = [
     *layer_types,
     'time',
+    'uri',
+    'bytes'
 ]
 
 
@@ -31,12 +33,12 @@ def get_timeseries_at_pixel(
 
     # meta = DataFrame(file_meta, columns=['fileName', 'bytes'])
     pandas_values = values.to_pandas()
-    # pandas_values = pandas_values.assign(
-    #     fileName=meta['fileName'].values, bytes=meta['bytes'].values
-    # )
+    pandas_values = pandas_values.assign(
+        file_name=pandas_values['uri'].map(lambda uri: uri.split('/')[-1])
+    )
 
     # sort by time, make fileName column the index for our data for nicer json output
-    # pandas_values = pandas_values.sort_index().reset_index().set_index('fileName')
+    pandas_values = pandas_values.sort_index().reset_index().set_index('file_name')
     pandas_values.loc['mean'] = pandas_values.mean(skipna=True, numeric_only=True)
     pandas_json = pandas_values.to_json(date_format='iso', orient='index')
     return pandas_json
@@ -48,7 +50,7 @@ def _read_layers_at_pixel(dataset: xr.Dataset, lat: float, lon: float) -> xr.Dat
     # reprojects lon lat to dataset projection, returns dict with reading at each layer
     crs = get_crs(dataset)
     xx, yy = _to_crs(lat, lon, target_proj=crs.to_epsg())
-    return dataset[_data_variables].sel(x=xx, y=yy, method='nearest', drop=True)
+    return dataset[_data_variables].sel(x=xx, y=yy, method='nearest')
 
 
 def _to_crs(lat: float, lon: float, source_proj='4326', target_proj='32610'):
