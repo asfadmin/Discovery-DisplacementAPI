@@ -171,7 +171,7 @@ def kerchunkify_file(
         # store uri and size of file at time of writing zarr store
         zarr_store = zarr.open(h5chunks.store)
         zarr_store.create_dataset('file_name', data=file_uri, dtype=str)
-        zarr_store.create_dataset('size', data=infile.size, dtype=float)
+        zarr_store.create_dataset('bytes', data=infile.size, dtype=float)
         return ujson.dumps(h5chunks.translate()).encode()
 
 
