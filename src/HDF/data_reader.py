@@ -56,37 +56,16 @@ def open_zarr_store(
     file_store: str,
     fsspec_params: FsspecParams,
     driver_params: DriverKeywords,
+    file_system: S3FileSystem,
+    group='/'
 ) -> xr.Dataset:
-    # s3 = S3FileSystem()
-
     # Implements example from Luis López using fsspec_params and driver_config for kerchunked zarr store
     # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
 
-    # bucket = '/'.join(file_store.split('/')[:-1])
-    fs = fsspec.filesystem(
-        'reference',
-        fo=file_store,
-        remote_protocol='s3',
-        remote_options={
-            'anon': False,
-            'default_fill_cache': False,
-            'default_cache_type': 'blockcache',
-            'skip_instance_cache': True,
-            'default_block_size': 24 * 1024 * 1024,
-            # 'block_size': 24 * 24,
-        },
-    )
-    m = fs.get_mapper('')
+    
+    m = file_system.get_mapper('')
 
-    dataset = xr.open_dataset(
-        m, engine='zarr', backend_kwargs={'consolidated': False}, chunks={}
-    )
-    # dataset['file_name'] = dataset['file_name'].astype('unicode')
-    # s3_files = [f'{bucket}/{fe.item()}' for fe in dataset['file_name']]
-    # I    dataset =dataset.drop('file_name')
-    # dataset['sizes'] = s3.sizes(s3_files)
-
-    # )
+    dataset = xr.open_dataset(m, engine='zarr', backend_kwargs={'consolidated': False, 'group': group}, chunks={})
 
     return dataset
 
@@ -140,21 +119,6 @@ def _normalize(data: npt.NDArray) -> npt.NDArray:
     return (data - lower) / ptp
 
 
-def kerchunkify_stack(uris: list[str]) -> bytes:
-    # s3 = S3FileSystem()
-    # file_names = []
-    # local_file_system = fsspec.filesystem('')
-    # for uri in uris:
-
-    # h5_str = kerchunkify_file(file_uri=uri, s3_file_system=s3)
-    # outf = f'{pathlib.Path(uri).name}.json'
-    # with local_file_system.open(outf, 'wb') as f:
-    #     f.write(h5_str)
-    # file_names.append(outf)
-
-    return _merge_kerchunks(uris)
-
-
 def kerchunkify_file(
     file_uri: str,
     s3_file_system: S3FileSystem = S3FileSystem(),
@@ -167,19 +131,19 @@ def kerchunkify_file(
     },
 ) -> bytes:
     with s3_file_system.open(file_uri, **storage_options) as infile:
-        h5chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=300) # type: ignore (infile)
+        h5_chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=300)  # type: ignore (infile)
 
-        file_size = infile.size # type: ignore (infline.size)
-        
+        file_size = infile.size  # type: ignore (infline.size)
+
         # store uri and size of file at time of writing zarr store
-        zarr_store = zarr.hierarchy.open_group(h5chunks.store)
+        zarr_store = zarr.hierarchy.open_group(h5_chunks.store)
         zarr_store.create_dataset('uri', data=file_uri, dtype=str)
         zarr_store.create_dataset('bytes', data=file_size, dtype=float)
-        return ujson.dumps(h5chunks.translate()).encode()
+        return ujson.dumps(h5_chunks.translate()).encode()
 
 
-def _merge_kerchunks(
-    files: list[str],
+def kerchunkify_stack(
+    zarr_uris: list[str],
     storage_options: dict = {
         'mode': 'rb',
         'anon': False,
@@ -188,21 +152,16 @@ def _merge_kerchunks(
         'block_size': 24 * 1024 * 1024,
     },
 ) -> bytes:
-    # import re
-
-    # ex = re.compile(r'.*/(.*).json')
-    mzz = MultiZarrToZarr(
-        files,
+    zarr_chunks = MultiZarrToZarr(
+        zarr_uris,
         target_options=storage_options,
-        # remote_protocol='s3',
         concat_dims=['time'],
         identical_dims=['y', 'x'],
-        # variables=
         coo_map={
             'time': 'cf:time',  # THIS KEEPS TIME FROM BEING DROPPED:
         },  # https://github.com/fsspec/kerchunk/issues/343#issuecomment-1666289741
     )
 
-    d = mzz.translate()
+    multi_zarr_store = zarr_chunks.translate()
 
-    return ujson.dumps(d).encode()
+    return ujson.dumps(multi_zarr_store).encode()
