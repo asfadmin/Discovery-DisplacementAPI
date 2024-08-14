@@ -1,122 +1,35 @@
 tests:
-    - test timeseries stack 1 file:
-          params:
-              files:
-                  ["s3://kfbx-opera-disp-test-bucket/20221107_20221213.unw.nc"]
-              lat: 38.57
-              lon: -121.53
-          response:
-              status_code: 200
-              expected_output:
-                {
-                    "20221107_20221213.unw.nc": {
-                        "time": "2022-12-13T14:07:50.748",
-                        "unwrapped_phase": -7.1020755768,
-                        "interferometric_correlation": 0.9609375,
-                        "temporal_coherence": 0.8041992188,
-                        "bytes": 331350016.0
-                    },
-                    "mean": {
-                        "time": null,
-                        "unwrapped_phase": -7.1020755768,
-                        "interferometric_correlation": 0.9609375,
-                        "temporal_coherence": 0.8041992188,
-                        "bytes": 331350016.0
-                    }
-                }
+  - test timeseries stack 14 files:
+      params:
+        file_store: s3://kfbx-opera-disp-test-bucket/11114.json
+        lat: 38.57
+        lon: -121.53
+      response:
+        status_code: 200
+        expected_output: sample_point_stack_data.yml
 
-    - test timeseries stack 3 files:
-          params:
-              files:
-                  [
-                      "s3://kfbx-opera-disp-test-bucket/20221107_20221213.unw.nc",
-                      "s3://kfbx-opera-disp-test-bucket/20221107_20230106.unw.nc",
-                      "s3://kfbx-opera-disp-test-bucket/20221107_20230130.unw.nc",
-                  ]
-              lat: 38.57
-              lon: -121.53
-          response:
-              status_code: 200
-              expected_output:
-                {
-                    "20221107_20221213.unw.nc": {
-                        "time": "2022-12-13T14:07:50.748",
-                        "unwrapped_phase": -7.1020755768,
-                        "interferometric_correlation": 0.9609375,
-                        "temporal_coherence": 0.8041992188,
-                        "bytes": 331350016.0
-                    },
-                    "20221107_20230106.unw.nc": {
-                        "time": "2023-01-06T14:07:49.520",
-                        "unwrapped_phase": 25.0342712402,
-                        "interferometric_correlation": 0.9604492188,
-                        "temporal_coherence": 0.8041992188,
-                        "bytes": 318767104.0
-                    },
-                    "20221107_20230130.unw.nc": {
-                        "time": "2023-01-30T14:07:48.874",
-                        "unwrapped_phase": 11.7699642181,
-                        "interferometric_correlation": 0.9711914062,
-                        "temporal_coherence": 0.8041992188,
-                        "bytes": 335544320.0
-                    },
-                    "mean": {
-                        "time": null,
-                        "unwrapped_phase": 9.9007196426,
-                        "interferometric_correlation": 0.9641926885,
-                        "temporal_coherence": 0.8041992188,
-                        "bytes": 328553813.3333333135
-                    }
-                }
+  - test timeseries stack 3 files out-of-bounds lat lon:
+      params:
+        file_store: s3://kfbx-opera-disp-test-bucket/11114.json
+        lat: 0
+        lon: 0
+      response:
+        status_code: 200
+        expected_output: sample_point_stack_nodata.yml
 
-    - test timeseries stack 3 files out-of-bounds lat lon:
-          params:
-              files:
-                  [
-                      "s3://kfbx-opera-disp-test-bucket/20221107_20221213.unw.nc",
-                      "s3://kfbx-opera-disp-test-bucket/20221107_20230106.unw.nc",
-                      "s3://kfbx-opera-disp-test-bucket/20221107_20230130.unw.nc",
-                  ]
-              lat: 0
-              lon: 0
-          response:
-              status_code: 200
-              expected_output:
-                {
-                    "20221107_20221213.unw.nc": {
-                        "time": "2022-12-13T14:07:50.748",
-                        "unwrapped_phase": null,
-                        "interferometric_correlation": 0.0,
-                        "temporal_coherence": 0.0,
-                        "bytes": 331350016.0
-                    },
-                    "20221107_20230106.unw.nc": {
-                        "time": "2023-01-06T14:07:49.520",
-                        "unwrapped_phase": null,
-                        "interferometric_correlation": 0.0,
-                        "temporal_coherence": 0.0,
-                        "bytes": 318767104.0
-                    },
-                    "20221107_20230130.unw.nc": {
-                        "time": "2023-01-30T14:07:48.874",
-                        "unwrapped_phase": null,
-                        "interferometric_correlation": 0.0,
-                        "temporal_coherence": 0.0,
-                        "bytes": 335544320.0
-                    },
-                    "mean": {
-                        "time": null,
-                        "unwrapped_phase": null,
-                        "interferometric_correlation": 0.0,
-                        "temporal_coherence": 0.0,
-                        "bytes": 328553813.3333333135
-                    }
-                }
+  - test timeseries empty files:
+      params:
+        file_store: ""
+        lat: 0.0
+        lon: 0.0
+      response:
+        status_code: 422
 
-    - test timeseries empty files:
-          params:
-              files: []
-              lat: 0.0
-              lon: 0.0
-          response:
-              status_code: 400
+  # - test timeseries stack 1 file:
+  #     params:
+  #       files: ["s3://kfbx-opera-disp-test-bucket/20221107_20221213.unw.nc"]
+  #       lat: 38.57
+  #       lon: -121.53
+  #     response:
+  #       status_code: 200
+  #       expected_output: sample_point_stack_data.yml

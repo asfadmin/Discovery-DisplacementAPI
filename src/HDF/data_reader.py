@@ -1,14 +1,12 @@
 import logging
 import os
-from typing import Optional, Tuple
+from typing import Optional
 from fastapi import HTTPException
-import fsspec
 import numpy as np
 import rasterio
 import xarray as xr
 import numpy.typing as npt
 import zarr
-from pathlib import Path
 
 import ujson
 import io
@@ -18,7 +16,7 @@ from PIL import Image
 from s3fs.core import S3FileSystem
 import zarr.hierarchy
 
-from src.models import DriverKeywords, FsspecParams
+from src.models import FsspecParams
 from kerchunk.hdf import SingleHdf5ToZarr
 from kerchunk.combine import MultiZarrToZarr
 
@@ -43,7 +41,6 @@ def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
             group=group,
             engine='h5netcdf',
             chunks={},
-            driver_kwds=DriverKeywords().model_dump(),
         )
     except Exception as e:
         raise HTTPException(400, f'Failed to read field name {file_name}: {e}')
@@ -52,20 +49,18 @@ def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
     return data
 
 
-def open_zarr_store(
-    file_store: str,
-    fsspec_params: FsspecParams,
-    driver_params: DriverKeywords,
-    file_system: S3FileSystem,
-    group='/'
-) -> xr.Dataset:
+def open_zarr_store(file_system: S3FileSystem, group='/') -> xr.Dataset:
     # Implements example from Luis López using fsspec_params and driver_config for kerchunked zarr store
     # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
 
-    
     m = file_system.get_mapper('')
 
-    dataset = xr.open_dataset(m, engine='zarr', backend_kwargs={'consolidated': False, 'group': group}, chunks={})
+    dataset = xr.open_dataset(
+        m,  # type: ignore
+        engine='zarr',
+        backend_kwargs={'consolidated': False, 'group': group},
+        chunks={},
+    )
 
     return dataset
 

@@ -4,7 +4,7 @@ import fsspec
 from src.HDF.data_reader import open_zarr_store, get_crs
 from pyproj import CRS, Transformer
 import xarray as xr
-from src.models import DriverKeywords, FsspecParams
+from src.models import FsspecParams
 # from pandas import DataFrame
 
 layer_types = [
@@ -22,7 +22,6 @@ def get_timeseries_at_pixel(
     lon: float,
     file_store: str,
     fsspec_params: FsspecParams,
-    driver_config: DriverKeywords,
 ) -> str:
     fs = fsspec.filesystem(
         'reference',
@@ -31,21 +30,14 @@ def get_timeseries_at_pixel(
         remote_options={
             'anon': False,
             'default_fill_cache': False,
-            'default_cache_type': 'blockcache',
-            'skip_instance_cache': True,
-            'default_block_size': 24 * 1024 * 1024,
+            'skip_instance_cache': False,
+            **fsspec_params.model_dump(),
         },
     )
     values = open_zarr_store(
-        file_store=file_store,
-        fsspec_params=fsspec_params,
-        driver_params=driver_config,
         file_system=fs,
     )
     identification = open_zarr_store(
-        file_store=file_store,
-        fsspec_params=fsspec_params,
-        driver_params=driver_config,
         file_system=fs,
         group='identification',
     )

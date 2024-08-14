@@ -11,7 +11,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from src.HDF.data_reader import kerchunkify_file, kerchunkify_stack
 from src.models import (
-    DriverKeywords,
     FsspecParams,
     KerchunkFileModel,
     KerchunkStackModel,
@@ -110,16 +109,10 @@ def get_timeseries(series: TimeSeriesModel):
     logging.debug(f'Sampling timeseries at lat {lat}, lon {lon}')
     if series.fsspec_params is None:
         series.fsspec_params = FsspecParams()
-    if series.driver_kwds is None:
-        series.driver_kwds = DriverKeywords()
 
     try:
         output_str = get_timeseries_at_pixel(
-            lat=lat,
-            lon=lon,
-            file_store=file_store,
-            fsspec_params=series.fsspec_params,
-            driver_config=series.driver_kwds,
+            lat=lat, lon=lon, file_store=file_store, fsspec_params=series.fsspec_params
         )
     except BaseException as exc:
         raise HTTPException(
@@ -150,6 +143,8 @@ def kerchunk_stack(KerchunkArgs: KerchunkStackModel):
         destination = f'{destination_bucket}{filename}'
         with s3.open(destination, 'wb') as f:
             f.write(bytes_output)  # type: ignore
+    except HTTPException as e:
+        raise e
     except BaseException as e:
         raise HTTPException(
             500,
