@@ -132,10 +132,17 @@ def kerchunkify_file(
 
         # store uri and size of file at time of writing zarr store
         zarr_store = zarr.hierarchy.open_group(h5_chunks.store)
-        zarr_store.create_dataset('uri', data=file_uri, dtype=str)
-        zarr_store.create_dataset('bytes', data=file_size, dtype=float)
+
+        _add_data_variable(zarr_store, 'uri', data=file_uri, dtype=str)
+        _add_data_variable(zarr_store, 'bytes', data=file_size, dtype=float)
+
         return ujson.dumps(h5_chunks.translate()).encode()
 
+def _add_data_variable(store: zarr.hierarchy.Group, key: str, data, dtype: type):
+    store.create_dataset(key, data=data, dtype=dtype)
+
+    # xarray won't be able to open the store without '_ARRAY_DIMENSIONS' attribute 
+    store[key].attrs['_ARRAY_DIMENSIONS'] = []
 
 def kerchunkify_stack(
     zarr_uris: list[str],
