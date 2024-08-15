@@ -1,20 +1,24 @@
 import logging
 import os
-from typing import Optional, Tuple
+from typing import Optional
 from fastapi import HTTPException
 import numpy as np
 import rasterio
 import xarray as xr
 import numpy.typing as npt
-from pathlib import Path
+import zarr
 
+import ujson
 import io
 from PIL import Image
 
 # from fsspec.implementations.local import S3FileSystem
 from s3fs.core import S3FileSystem
+import zarr.hierarchy
 
-from src.models import DriverKeywords, FsspecParams
+from src.models import FsspecParams
+from kerchunk.hdf import SingleHdf5ToZarr
+from kerchunk.combine import MultiZarrToZarr
 
 cwd = os.getcwd()
 test_path = os.path.join(cwd, 'tests')
@@ -37,7 +41,6 @@ def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
             group=group,
             engine='h5netcdf',
             chunks={},
-            driver_kwds=DriverKeywords().model_dump(),
         )
     except Exception as e:
         raise HTTPException(400, f'Failed to read field name {file_name}: {e}')
@@ -46,44 +49,20 @@ def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
     return data
 
 
-def open_datasets(
-    file_names: list[str],
-    fsspec_params: FsspecParams,
-    driver_params: DriverKeywords,
-    preprocess=None,
-) -> Tuple[xr.Dataset, list[Tuple[str, int]]]:
-    s3 = S3FileSystem()
-
-    # Implements example from Luis López using fsspec_params and driver_config
+def open_zarr_store(file_system: S3FileSystem, group='/') -> xr.Dataset:
+    # Implements example from Luis López using fsspec_params and driver_config for kerchunked zarr store
     # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
 
-    fsspec_files = [
-        s3.open(file_name, mode='rb', **fsspec_params.model_dump()) for file_name in file_names
-    ]
-    file_sizes = list(zip([Path(f).name for f in file_names], s3.sizes(file_names)))
+    m = file_system.get_mapper('')
 
-    datasets = xr.open_mfdataset(
-        fsspec_files,  # type: ignore
-        join='exact',
-        data_vars='different',
-        # chunks='auto',
+    dataset = xr.open_dataset(
+        m,  # type: ignore
+        engine='zarr',
+        backend_kwargs={'consolidated': False, 'group': group},
         chunks={},
-        concat_dim='time',
-        combine='nested',
-        engine='h5netcdf',
-        parallel=True,
-        drop_variables=[
-            'corrections',
-            'Conventions',
-            'identification',
-            'metadata',
-            'connected_component_labels',
-        ],
-        preprocess=preprocess,
-        driver_kwds=driver_params.model_dump(),
     )
 
-    return datasets, file_sizes
+    return dataset
 
 
 def read_layer_as_png_buffer(file_name: str, layer: str) -> io.BytesIO:
@@ -133,3 +112,58 @@ def _normalize(data: npt.NDArray) -> npt.NDArray:
 
     # normalize
     return (data - lower) / ptp
+
+
+def kerchunkify_file(
+    file_uri: str,
+    s3_file_system: S3FileSystem = S3FileSystem(),
+    storage_options: dict = {
+        'mode': 'rb',
+        'anon': False,
+        'default_fill_cache': False,
+        'default_cache_type': 'first',
+        'default_block_size': 1024 * 1024,
+    },
+) -> bytes:
+    with s3_file_system.open(file_uri, **storage_options) as infile:
+        h5_chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=300)  # type: ignore (infile)
+
+        file_size = infile.size  # type: ignore (infline.size)
+
+        # store uri and size of file at time of writing zarr store
+        zarr_store = zarr.hierarchy.open_group(h5_chunks.store)
+
+        _add_data_variable(zarr_store, 'uri', data=file_uri, dtype=str)
+        _add_data_variable(zarr_store, 'bytes', data=file_size, dtype=float)
+
+        return ujson.dumps(h5_chunks.translate()).encode()
+
+def _add_data_variable(store: zarr.hierarchy.Group, key: str, data, dtype: type):
+    store.create_dataset(key, data=data, dtype=dtype)
+
+    # xarray won't be able to open the store without '_ARRAY_DIMENSIONS' attribute 
+    store[key].attrs['_ARRAY_DIMENSIONS'] = []
+
+def kerchunkify_stack(
+    zarr_uris: list[str],
+    storage_options: dict = {
+        'mode': 'rb',
+        'anon': False,
+        'default_fill_cache': False,
+        'default_cache_type': 'first',
+        'block_size': 24 * 1024 * 1024,
+    },
+) -> bytes:
+    zarr_chunks = MultiZarrToZarr(
+        zarr_uris,
+        target_options=storage_options,
+        concat_dims=['time'],
+        identical_dims=['y', 'x'],
+        coo_map={
+            'time': 'cf:time',  # THIS KEEPS TIME FROM BEING DROPPED:
+        },  # https://github.com/fsspec/kerchunk/issues/343#issuecomment-1666289741
+    )
+
+    multi_zarr_store = zarr_chunks.translate()
+
+    return ujson.dumps(multi_zarr_store).encode()
