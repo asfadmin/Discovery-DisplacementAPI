@@ -17,13 +17,15 @@ from src.models import (
     TimeSeriesModel,
     WKTModel,
 )
-from src.timeseries import get_timeseries_at_pixel, layer_types
+from src.timeseries import layer_types, get_timeseries_over_aoi
 from src.HDF import read_layer_as_png_buffer
 import s3fs
 import ujson
 
 import asf_search as asf
+
 from . import log_router
+from shapely import wkt as shapely_wkt
 
 router = APIRouter(route_class=log_router.LoggingRoute)
 app = FastAPI()
@@ -102,17 +104,24 @@ def get_wkt():
 )
 def get_timeseries(series: TimeSeriesModel):
     # epsg: 32610
-    lat = series.lat
-    lon = series.lon
     file_store = series.file_store
 
-    logging.debug(f'Sampling timeseries at lat {lat}, lon {lon}')
+    try:
+        geometry = shapely_wkt.loads(series.wkt)
+    except BaseException as exc:
+        raise HTTPException(
+            400, detail=f'Failed to load provided wkt string. Original Error: {exc}'
+        )
+
+    logging.debug(f'wkt loaded: {geometry.wkt}')
+
+    # logging.debug(f'Sampling timeseries at lat {lat}, lon {lon}')
     if series.fsspec_params is None:
         series.fsspec_params = FsspecParams()
 
     try:
-        output_str = get_timeseries_at_pixel(
-            lat=lat, lon=lon, file_store=file_store, fsspec_params=series.fsspec_params
+        output_str = get_timeseries_over_aoi(
+            geometry=geometry, file_store=file_store, fsspec_params=series.fsspec_params
         )
     except BaseException as exc:
         raise HTTPException(

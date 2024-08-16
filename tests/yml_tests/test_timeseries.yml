@@ -2,17 +2,15 @@ tests:
   - test timeseries stack 14 files:
       params:
         file_store: s3://kfbx-opera-disp-test-bucket/11114.json
-        lat: 38.57
-        lon: -121.53
+        wkt: POINT (-121.53 38.57)
       response:
         status_code: 200
         expected_output: sample_point_stack_data.yml
 
-  - test timeseries stack 3 files out-of-bounds lat lon:
+  - test timeseries stack 14 files out-of-bounds lat lon:
       params:
         file_store: s3://kfbx-opera-disp-test-bucket/11114.json
-        lat: 0
-        lon: 0
+        wkt: POINT (0 0)
       response:
         status_code: 200
         expected_output: sample_point_stack_nodata.yml
@@ -20,10 +18,18 @@ tests:
   - test timeseries empty files:
       params:
         file_store: ""
-        lat: 0.0
-        lon: 0.0
+        wkt: POINT (0 0)
       response:
         status_code: 422
+
+  - test timeseries stack 14 files polygon in bounds:
+      params:
+        file_store: s3://kfbx-opera-disp-test-bucket/11114.json
+        wkt: POLYGON((-121.0826 38.5164,-120.8805 38.5164,-120.8805 38.6335,-121.0826 38.6335,-121.0826 38.5164))
+      response:
+        status_code: 200
+        expected_output: sample_in_frame_polygon_stack_data.yml
+
 
   # - test timeseries stack 1 file:
   #     params:

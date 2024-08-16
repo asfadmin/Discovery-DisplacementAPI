@@ -9,11 +9,8 @@ class FsspecParams(BaseModel):
 
 
 class TimeSeriesModel(BaseModel):
-    # files: list[str]
+    wkt: str
     file_store: str = Field(pattern=r'^s3://([^/]+)/(.*?([^/]+))$')
-    lon: float = 0.0
-    lat: float = 0.0
-
     fsspec_params: Optional[FsspecParams] = FsspecParams()  # used when opening s3 files by s3fs
 
 

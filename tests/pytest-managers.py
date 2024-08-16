@@ -25,8 +25,7 @@ def test_timeseries(**args) -> None:
     expected_response = test_info['response']
 
     file_store = params['file_store']
-    lat = params['lat']
-    lon = params['lon']
+    wkt = params['wkt']
 
     status_code = expected_response['status_code']
 
@@ -40,8 +39,7 @@ def test_timeseries(**args) -> None:
         driver_keywords = driver_kwds
 
     test_data = {
-        'lat': lat,
-        'lon': lon,
+        'wkt': wkt,
         'file_store': file_store,
         'fsspec_params': fsspec_params,
         'driver_keywords': driver_keywords,
