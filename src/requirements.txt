@@ -15,4 +15,6 @@ kerchunk
 ujson
 cftime
 asf-search==8.0.0
+geopandas
+rioxarray
 # aws-cdk-lib
