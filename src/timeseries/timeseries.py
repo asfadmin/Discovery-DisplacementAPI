@@ -1,7 +1,7 @@
 # import rasterio
 from typing import Tuple
 import fsspec
-from shapely import Point, Polygon
+from shapely import LineString, Point, Polygon
 from src.HDF.data_reader import open_zarr_store, get_crs
 from pyproj import CRS, Transformer
 import xarray as xr
@@ -50,7 +50,7 @@ def get_timeseries_over_aoi(
 
     if isinstance(geometry, Point):
         values = _read_layers_at_pixel(values, lon=geometry.x, lat=geometry.y)
-    elif isinstance(geometry, Polygon):
+    elif isinstance(geometry, Polygon) or isinstance(geometry, LineString):
         values = _read_layers_with_aoi(values, geometry)
     return _pandas_output(values)
 
@@ -72,7 +72,7 @@ def _read_layers_with_aoi(dataset: xr.Dataset, geometry: BaseGeometry):
     crs = get_crs(dataset)
     epsg = crs.to_epsg()
 
-    projected = _transform_polygon(geometry=geometry, target_proj=epsg)
+    projected = _transform_geometry(geometry=geometry, target_proj=epsg)
 
     dataset.rio.set_spatial_dims(x_dim='x', y_dim='y', inplace=True)
     dataset.rio.write_crs(str(crs), inplace=True)
@@ -93,7 +93,7 @@ def _to_crs(lat: float, lon: float, source_proj='4326', target_proj='32610'):
     return source_to_target.transform(lat, lon)
 
 
-def _transform_polygon(geometry: BaseGeometry, source_proj='4326', target_proj='32610'):
+def _transform_geometry(geometry: BaseGeometry, source_proj='4326', target_proj='32610'):
     project = Transformer.from_crs(source_proj, target_proj, always_xy=True).transform
     return shapely_transform(project, geometry)
 

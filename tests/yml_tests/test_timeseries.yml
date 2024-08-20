@@ -30,7 +30,29 @@ tests:
         status_code: 200
         expected_output: sample_in_frame_polygon_stack_data.yml
 
+  - test timeseries stack 14 files polygon out of bounds:
+      params:
+        file_store: s3://kfbx-opera-disp-test-bucket/11114.json
+        wkt: POLYGON((-119.1817 38.6755,-119.1725 38.6755,-119.1725 38.6816,-119.1817 38.6816,-119.1817 38.6755))
+      response:
+        status_code: 200
+        expected_output: sample_out_frame_polygon_stack_data.yml
 
+  - test timeseries stack 14 files polygon partial out of bounds:
+      params:
+        file_store: s3://kfbx-opera-disp-test-bucket/11114.json
+        wkt: POLYGON((-120.4882 38.1315,-120.4772 38.1315,-120.4772 38.1336,-120.4882 38.1336,-120.4882 38.1315))
+      response:
+        status_code: 200
+        expected_output: sample_double_intersect_frame_polygon_stack_data.yml
+
+  - test timeseries stack 14 files polygon in bounds linestring:
+      params:
+        file_store: s3://kfbx-opera-disp-test-bucket/11114.json
+        wkt: LINESTRING(-121.1277 38.7315,-121.1431 38.7479,-121.1649 38.7227)
+      response:
+        status_code: 200
+        expected_output: 3_point_linestring_folsom_lake.yml
   # - test timeseries stack 1 file:
   #     params:
   #       files: ["s3://kfbx-opera-disp-test-bucket/20221107_20221213.unw.nc"]
