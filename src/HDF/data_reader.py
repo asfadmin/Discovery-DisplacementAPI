@@ -138,11 +138,13 @@ def kerchunkify_file(
 
         return ujson.dumps(h5_chunks.translate()).encode()
 
+
 def _add_data_variable(store: zarr.hierarchy.Group, key: str, data, dtype: type):
     store.create_dataset(key, data=data, dtype=dtype)
 
-    # xarray won't be able to open the store without '_ARRAY_DIMENSIONS' attribute 
+    # xarray won't be able to open the store without '_ARRAY_DIMENSIONS' attribute
     store[key].attrs['_ARRAY_DIMENSIONS'] = []
+
 
 def kerchunkify_stack(
     zarr_uris: list[str],
