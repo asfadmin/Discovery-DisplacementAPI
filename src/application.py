@@ -6,6 +6,7 @@ from fastapi import APIRouter, FastAPI, HTTPException, Response
 import logging
 
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 # from mangum import Mangum
 from pydantic import BaseModel
@@ -27,7 +28,14 @@ from . import log_router
 
 router = APIRouter(route_class=log_router.LoggingRoute)
 app = FastAPI()
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        '*'
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 DEFAULT_HEADERS = {
     'Access-Control-Allow-Origin': '*',
 }
