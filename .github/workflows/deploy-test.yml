@@ -3,7 +3,7 @@ name: HDFReaderAPI deploy action (test)
 on:
   push:
     branches:
-      - cdk
+      - cdk-deploy
 
 jobs:
   deploy:
