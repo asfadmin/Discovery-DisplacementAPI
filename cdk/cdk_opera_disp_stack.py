@@ -1,0 +1,35 @@
+from aws_cdk import (
+    Duration,
+    Stack,
+    aws_lambda as _lambda,
+)
+from constructs import Construct
+
+
+class CdkOperaDispStack(Stack):
+    def __init__(
+        self, scope: Construct, construct_id: str, deployment_environment: str, **kwargs
+    ) -> None:
+        super().__init__(scope, construct_id, **kwargs)
+        self.deployment_environment = deployment_environment
+        # self.create_lambda_layers()
+        self.create_lambda_functions()
+        # Define the Lambda function resource
+
+    def create_lambda_functions(self):
+        """
+        Create the Lambda Functions for the FastAPI server.
+        """
+        dockerfileDir = '../'
+        self.opera_timeseries_function = _lambda.DockerImageFunction(
+            self,
+            'DispServiceDockerFunction',
+            code=_lambda.DockerImageCode.from_image_asset(dockerfileDir),
+            function_name='DispServiceDockerAPIFunction',
+            timeout=Duration.seconds(30),
+            memory_size=10240,
+        )
+
+        self.lambda_function_url = self.opera_timeseries_function.add_function_url(
+            auth_type=_lambda.FunctionUrlAuthType.NONE
+        )

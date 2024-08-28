@@ -1,22 +1,43 @@
 import json
+from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, HTTPException, Response
 
 import logging
 
 from fastapi.responses import JSONResponse
-from mangum import Mangum
+from fastapi.middleware.cors import CORSMiddleware
+
+# from mangum import Mangum
 from pydantic import BaseModel
-from src.models import DriverKeywords, FsspecParams, TimeSeriesModel
-from src.timeseries import get_timeseries_at_pixel, layer_types
+from src.HDF.data_reader import kerchunkify_file, kerchunkify_stack
+from src.models import (
+    FsspecParams,
+    KerchunkFileModel,
+    KerchunkStackModel,
+    TimeSeriesModel,
+    WKTModel,
+)
+from src.timeseries import layer_types, get_timeseries_over_aoi
 from src.HDF import read_layer_as_png_buffer
 import s3fs
+import ujson
+
+import asf_search as asf
+
 from . import log_router
+from shapely import wkt as shapely_wkt
 
 router = APIRouter(route_class=log_router.LoggingRoute)
 app = FastAPI()
-
-lambda_handler = Mangum(app)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        '*'
+    ],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 DEFAULT_HEADERS = {
     'Access-Control-Allow-Origin': '*',
 }
@@ -91,29 +112,24 @@ def get_wkt():
 )
 def get_timeseries(series: TimeSeriesModel):
     # epsg: 32610
-    lat = series.lat
-    lon = series.lon
-    files = series.files
-
-    if len(files) == 0:
-        raise HTTPException(
-            400,
-            'Value Error: Received empty list for "files" parameter, please provide list of s3 URIs',
-        )
-
-    logging.debug(f'Sampling timeseries at lat {lat}, lon {lon}')
-    if series.fsspec_params is None:
-        series.fsspec_params = FsspecParams()
-    if series.driver_kwds is None:
-        series.driver_kwds = DriverKeywords()
+    file_store = series.file_store
 
     try:
-        output_str = get_timeseries_at_pixel(
-            lat=lat,
-            lon=lon,
-            file_stack=[file for file in files],
-            fsspec_params=series.fsspec_params,
-            driver_config=series.driver_kwds,
+        geometry = shapely_wkt.loads(series.wkt)
+    except BaseException as exc:
+        raise HTTPException(
+            400, detail=f'Failed to load provided wkt string. Original Error: {exc}'
+        )
+
+    logging.debug(f'wkt loaded: {geometry.wkt}')
+
+    # logging.debug(f'Sampling timeseries at lat {lat}, lon {lon}')
+    if series.fsspec_params is None:
+        series.fsspec_params = FsspecParams()
+
+    try:
+        output_str = get_timeseries_over_aoi(
+            geometry=geometry, file_store=file_store, fsspec_params=series.fsspec_params
         )
     except BaseException as exc:
         raise HTTPException(
@@ -121,3 +137,106 @@ def get_timeseries(series: TimeSeriesModel):
         )
 
     return Response(content=output_str, media_type='application/json', headers=DEFAULT_HEADERS)
+
+
+@app.post(
+    '/kerchunk_stack',
+    description='Returns a json zarr store bytes',
+)
+def kerchunk_stack(KerchunkArgs: KerchunkStackModel):
+    try:
+        bytes_output = kerchunkify_stack(KerchunkArgs.files)
+    except BaseException as exc:
+        raise HTTPException(
+            500,
+            detail=f'Failed to kerchunkify the provided stack of files. Original Exception: {exc}',
+        )
+
+    destination_bucket = KerchunkArgs.destination_bucket
+    filename = '11114.json'
+
+    s3 = s3fs.S3FileSystem()
+    try:
+        destination = f'{destination_bucket}{filename}'
+        with s3.open(destination, 'wb') as f:
+            f.write(bytes_output)  # type: ignore
+    except HTTPException as e:
+        raise e
+    except BaseException as e:
+        raise HTTPException(
+            500,
+            detail=f'Failed to write zarr store to destination {destination}. Original Exception: {e}',
+        )
+
+    return Response(
+        content=ujson.dumps({'file_uri': destination}),
+        headers=DEFAULT_HEADERS,
+        media_type='application/json',
+    )
+
+
+@app.post(
+    '/kerchunk_file',
+    description='Returns a json zarr store bytes',
+)
+def kerchunk_file(KerchunkArgs: KerchunkFileModel):
+    s3_str = KerchunkArgs.file_uri.unicode_string()
+    destination_str = KerchunkArgs.destination.unicode_string()
+    s3 = s3fs.S3FileSystem()
+    try:
+        zarr_store = kerchunkify_file(s3_str, s3_file_system=s3)
+    except BaseException as exc:
+        raise HTTPException(
+            500,
+            detail=f'Failed to kerchunkify the provided file. Original Exception: {exc}',
+        )
+
+    if KerchunkArgs.destination_filename is None:
+        destination = f'{destination_str}{Path(s3_str).name}.json'
+    else:
+        destination = f'{destination_str}{KerchunkArgs.destination_filename}'
+        if not destination.endswith('.json'):
+            destination += '.json'
+
+    try:
+        with s3.open(destination, 'wb') as f:
+            f.write(zarr_store)  # type: ignore
+    except BaseException as e:
+        raise HTTPException(
+            500,
+            detail=f'Failed to write zarr store to destination {destination}. Original Exception: {e}',
+        )
+
+    return Response(
+        content=ujson.dumps({'file_uri': destination}),
+        headers=DEFAULT_HEADERS,
+        media_type='application/json',
+    )
+
+
+@app.post(
+    '/get_frame_id',
+    description='Returns a json zarr store bytes',
+)
+def get_frame_ids(wkt_event: WKTModel):
+    wkt = wkt_event.wkt
+    try:
+        response = asf.search(intersectsWith=wkt, dataset=asf.DATASET.OPERA_S1, maxResults=250)
+    except asf.ASFSearchError as exc:
+        raise HTTPException(
+            status_code=500, detail=f'Failed to find frame(s) for given wkt. Reason: {exc}'
+        )
+
+    frame_ids = {
+        burst_id
+        for product in response
+        if (burst_id := product.properties.get('operaBurstID')) is not None
+    }
+
+    if len(frame_ids) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f'No OPERA-S1 burst frame ids were found over the given aoi: {wkt}',
+        )
+
+    return JSONResponse({'frame_ids': sorted(list(frame_ids)), 'wkt': wkt}, headers=DEFAULT_HEADERS)

@@ -1,21 +1,7 @@
+import os
+import pathlib
 import requests
-
-test_files = [
-    's3://kfbx-opera-disp-test-bucket/20221107_20221213.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230106.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230130.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230211.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230223.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230319.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230331.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230412.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230506.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230518.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230530.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230705.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230717.unw.nc',
-    's3://kfbx-opera-disp-test-bucket/20221107_20230729.unw.nc',
-]
+import yaml
 
 reader_configs = {
     'driver_keywords': {
@@ -38,9 +24,8 @@ def test_timeseries(**args) -> None:
     params = test_info['params']
     expected_response = test_info['response']
 
-    files = params['files']
-    lat = params['lat']
-    lon = params['lon']
+    file_store = params['file_store']
+    wkt = params['wkt']
 
     status_code = expected_response['status_code']
 
@@ -54,9 +39,8 @@ def test_timeseries(**args) -> None:
         driver_keywords = driver_kwds
 
     test_data = {
-        'lat': lat,
-        'lon': lon,
-        'files': files,
+        'wkt': wkt,
+        'file_store': file_store,
         'fsspec_params': fsspec_params,
         'driver_keywords': driver_keywords,
     }
@@ -69,11 +53,33 @@ def test_timeseries(**args) -> None:
         except BaseException as exc:
             raise Exception(f'timeseries endpoint failed. Reason: {exc}')
     else:
-        assert response.status_code == status_code
+        assert (
+            response.status_code == status_code
+        ), f'Expected error code {status_code}, got response code {response.status_code}, "{response.text}"'
 
     expected_output = expected_response.get('expected_output')
 
     if expected_output is not None:
+        expected_output = get_resource(expected_output)
         body = response.json()
 
-        assert body == expected_output
+        assert sorted(body) == sorted(expected_output), f'Expected {expected_output}, got {body}'
+
+
+# Finds and loads file from yml_tests/Resouces/ if loaded field ends with .yml/yaml extension
+def get_resource(yml_file):
+    if isinstance(yml_file, str):
+        if yml_file.endswith(('.yml', '.yaml')):
+            base_path = pathlib.Path(__file__).parent.resolve()
+            with open(os.path.join(base_path, 'yml_tests', 'resources', yml_file), 'r') as f:
+                try:
+                    return yaml.safe_load(f)
+                except yaml.YAMLError as exc:
+                    print(exc)
+    elif isinstance(yml_file, list):  # check if it's a list of yml files
+        if len(yml_file) > 0:
+            if isinstance(yml_file[0], str):
+                if yml_file[0].endswith(('.yml', '.yaml')):
+                    return [get_resource(file) for file in yml_file]
+
+    return yml_file
