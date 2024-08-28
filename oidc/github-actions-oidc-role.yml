@@ -16,7 +16,7 @@ Resources:
             Action: sts:AssumeRoleWithWebIdentity
             Condition:
               StringLike:
-                'token.actions.githubusercontent.com:sub': ['repo:asfadmin/Discovery-Discovery-HDFReaderAPI:*']
+                'token.actions.githubusercontent.com:sub': ['repo:asfadmin/Discovery-HDFReaderAPI:*']
               StringEqualsIgnoreCase:
                 'token.actions.githubusercontent.com:aud': sts.amazonaws.com
       Policies:
