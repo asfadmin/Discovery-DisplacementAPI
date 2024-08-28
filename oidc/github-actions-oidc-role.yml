@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: GitHub OIDC for when GitHub wants to communicate with AWS EDC Account.
+
+Resources:
+  # This is the bare-bones role.
+  GitHubActionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: GitHubActionsRoleHDFReadertest
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringLike:
+                'token.actions.githubusercontent.com:sub': ['repo:asfadmin/Discovery-Discovery-HDFReaderAPI:*']
+              StringEqualsIgnoreCase:
+                'token.actions.githubusercontent.com:aud': sts.amazonaws.com
+      Policies:
+        - PolicyName: GitHubActionsHDFReaderDeployPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowCDKAssumeRole
+                Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                  - iam:PassRole
+                Resource:
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/cdk-hnb659fds-lookup-role-${AWS::AccountId}-${AWS::Region}
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}
+                  - !Sub arn:aws:iam::${AWS::AccountId}:role/cdk-hnb659fds-image-publishing-role-${AWS::AccountId}-${AWS::Region}
