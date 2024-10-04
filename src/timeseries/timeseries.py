@@ -18,12 +18,20 @@ layer_types = [
     'persistent_scatterer_mask',
 ]
 
-_data_variables = [*layer_types, 'time', 'uri', 'bytes', 'reference_datetime', 'temporal_baseline']
+_data_variables = [
+    *layer_types,
+    'netcdf_uri',
+    'bytes',
+    'reference_datetime',
+    'secondary_datetime',
+    'temporal_baseline',
+]
 
 
 def get_timeseries_over_aoi(
     geometry: BaseGeometry,
     file_store: str,
+    target_files: list[str],
     fsspec_params: FsspecParams,
 ) -> str:
     fs = fsspec.filesystem(
@@ -39,14 +47,14 @@ def get_timeseries_over_aoi(
     )
     values = open_zarr_store(
         file_system=fs,
+        target_files=target_files,
     )
-    identification = open_zarr_store(
-        file_system=fs,
-        group='identification',
-    )
-    values['reference_datetime'], values['temporal_baseline'] = _calc_temporal_offsets(
-        identification
-    )
+    # identification = open_zarr_store(
+    #     file_system=fs,
+    #     target_files=target_files,
+    #     group='identification',
+    # )
+    _calc_temporal_offsets(values)
 
     if isinstance(geometry, Point):
         values = _read_layers_at_pixel(values, lon=geometry.x, lat=geometry.y)
@@ -98,23 +106,23 @@ def _transform_geometry(geometry: BaseGeometry, source_proj='4326', target_proj=
     return shapely_transform(project, geometry)
 
 
-def _calc_temporal_offsets(identifcation_data: xr.Dataset) -> Tuple[xr.DataArray, xr.DataArray]:
+def _calc_temporal_offsets(data: xr.Dataset) -> Tuple[xr.DataArray, xr.DataArray]:
     """Returns reference times and calculated temporal offset based off earliest reference_datetime value"""
-    secondary_datetimes = identifcation_data.data_vars['secondary_datetime'].astype('datetime64[s]')
-    reference_datetimes = identifcation_data.data_vars['reference_datetime'].astype('datetime64[s]')
+    secondary_datetimes = data['secondary_datetime']
+    reference_datetimes = data['reference_datetime']
 
-    temporal_baselines = (
+    data['temporal_baseline'] = (
         (secondary_datetimes.dt.date - reference_datetimes.dt.date.min())
         .astype('timedelta64[s]')
         .dt.days
     )
-    return reference_datetimes, temporal_baselines
+    # return reference_datetimes, temporal_baselines
 
 
 def _pandas_output(data: xr.Dataset):
     pandas_values = data.to_pandas()
     pandas_values = pandas_values.assign(
-        file_name=pandas_values['uri'].map(lambda uri: uri.split('/')[-1])
+        file_name=pandas_values['netcdf_uri'].map(lambda uri: uri.split('/')[-1])
     )
 
     # sort by time, make fileName column the index for our data for nicer json output

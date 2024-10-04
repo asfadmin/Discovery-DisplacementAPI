@@ -32,11 +32,9 @@ router = APIRouter(route_class=log_router.LoggingRoute)
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        '*'
-    ],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=['*'],
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 DEFAULT_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -113,6 +111,7 @@ def get_wkt():
 def get_timeseries(series: TimeSeriesModel):
     # epsg: 32610
     file_store = series.file_store
+    target_files = series.target_files
 
     try:
         geometry = shapely_wkt.loads(series.wkt)
@@ -129,7 +128,10 @@ def get_timeseries(series: TimeSeriesModel):
 
     try:
         output_str = get_timeseries_over_aoi(
-            geometry=geometry, file_store=file_store, fsspec_params=series.fsspec_params
+            geometry=geometry,
+            file_store=file_store,
+            target_files=target_files,
+            fsspec_params=series.fsspec_params,
         )
     except BaseException as exc:
         raise HTTPException(
@@ -180,11 +182,12 @@ def kerchunk_stack(KerchunkArgs: KerchunkStackModel):
     description='Returns a json zarr store bytes',
 )
 def kerchunk_file(KerchunkArgs: KerchunkFileModel):
-    s3_str = KerchunkArgs.file_uri.unicode_string()
-    destination_str = KerchunkArgs.destination.unicode_string()
+    s3_str = KerchunkArgs.file_uri  # .unicode_string()
+    destination_str = KerchunkArgs.destination  # .unicode_string()
     s3 = s3fs.S3FileSystem()
     try:
-        zarr_store = kerchunkify_file(s3_str, s3_file_system=s3)
+        version_number = 'v2.0' if s3_str.split('/')[-1].startswith('v_2') else 'v1.0'
+        zarr_store = kerchunkify_file(s3_str, s3_file_system=s3, product_version=version_number)
     except BaseException as exc:
         raise HTTPException(
             500,

@@ -11,12 +11,13 @@ class FsspecParams(BaseModel):
 class TimeSeriesModel(BaseModel):
     wkt: str
     file_store: str = Field(pattern=r'^s3://([^/]+)/(.*?([^/]+))$')
+    target_files: list[str] = []  # the files to filter from the zarr store before the final result
     fsspec_params: Optional[FsspecParams] = FsspecParams()  # used when opening s3 files by s3fs
 
 
 class KerchunkFileModel(BaseModel):
-    file_uri: Annotated[Url, UrlConstraints(allowed_schemes=['s3'])]
-    destination: Annotated[Url, UrlConstraints(allowed_schemes=['s3'])]
+    file_uri: str  # Annotated[Url, UrlConstraints(allowed_schemes=['s3'])]
+    destination: str  # Annotated[Url, UrlConstraints(allowed_schemes=['s3'])]
     destination_filename: Optional[str] = None
 
 

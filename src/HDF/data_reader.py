@@ -18,7 +18,8 @@ import zarr.hierarchy
 
 from src.models import FsspecParams
 from kerchunk.hdf import SingleHdf5ToZarr
-from kerchunk.combine import MultiZarrToZarr
+from kerchunk.combine import MultiZarrToZarr, drop
+import h5py
 
 cwd = os.getcwd()
 test_path = os.path.join(cwd, 'tests')
@@ -49,7 +50,9 @@ def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
     return data
 
 
-def open_zarr_store(file_system: S3FileSystem, group='/') -> xr.Dataset:
+def open_zarr_store(
+    file_system: S3FileSystem, target_files: list[str] = [], group='/'
+) -> xr.Dataset:
     # Implements example from Luis López using fsspec_params and driver_config for kerchunked zarr store
     # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
 
@@ -61,6 +64,12 @@ def open_zarr_store(file_system: S3FileSystem, group='/') -> xr.Dataset:
         backend_kwargs={'consolidated': False, 'group': group},
         chunks={},
     )
+
+    # https://github.com/pydata/xarray/issues/3124
+    # Zarr stack is indexed by source_file_name. we can use this to pre-filter results to products
+    # we're interested in
+    if len(target_files):
+        dataset = dataset.where(dataset.source_file_name.isin(target_files), drop=True)
 
     return dataset
 
@@ -117,6 +126,7 @@ def _normalize(data: npt.NDArray) -> npt.NDArray:
 def kerchunkify_file(
     file_uri: str,
     s3_file_system: S3FileSystem = S3FileSystem(),
+    product_version: str = '1.0',
     storage_options: dict = {
         'mode': 'rb',
         'anon': False,
@@ -126,16 +136,31 @@ def kerchunkify_file(
     },
 ) -> bytes:
     with s3_file_system.open(file_uri, **storage_options) as infile:
+        dataset = h5py.File(infile, 'r')
+        reference_datetime = dataset['identification']['reference_datetime'][()]
+        secondary_datetime = dataset['identification']['secondary_datetime'][()]
         h5_chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=300)  # type: ignore (infile)
-
         file_size = infile.size  # type: ignore (infline.size)
 
-        # store uri and size of file at time of writing zarr store
+        # store uri, size, file_name, product version, reference/secondary datetimes of file in root group
         zarr_store = zarr.hierarchy.open_group(h5_chunks.store)
-
-        _add_data_variable(zarr_store, 'uri', data=file_uri, dtype=str)
+        source_file_name = file_uri.split('/')[-1]
+        _add_data_variable(zarr_store, 'netcdf_uri', data=file_uri, dtype=str)
         _add_data_variable(zarr_store, 'bytes', data=file_size, dtype=float)
-
+        _add_data_variable(zarr_store, 'source_file_name', data=source_file_name, dtype=str)
+        _add_data_variable(zarr_store, 'product_version', data=product_version, dtype=str)
+        _add_data_variable(
+            zarr_store,
+            'reference_datetime',
+            data=reference_datetime,
+            dtype=np.dtype('datetime64[ns]'),
+        )
+        _add_data_variable(
+            zarr_store,
+            'secondary_datetime',
+            data=secondary_datetime,
+            dtype=np.dtype('datetime64[ns]'),
+        )
         return ujson.dumps(h5_chunks.translate()).encode()
 
 
@@ -156,16 +181,15 @@ def kerchunkify_stack(
         'block_size': 24 * 1024 * 1024,
     },
 ) -> bytes:
+    drop_time = drop('time')
     zarr_chunks = MultiZarrToZarr(
         zarr_uris,
         target_options=storage_options,
-        concat_dims=['time'],
+        remote_protocol='s3',
+        concat_dims=['source_file_name'],
         identical_dims=['y', 'x'],
-        coo_map={
-            'time': 'cf:time',  # THIS KEEPS TIME FROM BEING DROPPED:
-        },  # https://github.com/fsspec/kerchunk/issues/343#issuecomment-1666289741
+        preprocess=drop_time,
     )
-
     multi_zarr_store = zarr_chunks.translate()
 
     return ujson.dumps(multi_zarr_store).encode()
