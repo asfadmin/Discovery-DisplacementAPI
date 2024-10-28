@@ -9,10 +9,9 @@ from src.models import FsspecParams
 from shapely.ops import transform as shapely_transform
 from shapely.geometry.base import BaseGeometry
 import geopandas as gpd
-# from pandas import DataFrame
 
 layer_types = [
-    'unwrapped_phase',
+    'short_wavelength_displacement',
     'interferometric_correlation',
     'temporal_coherence',
     'persistent_scatterer_mask',
@@ -38,6 +37,7 @@ def get_timeseries_over_aoi(
         'reference',
         fo=file_store,
         remote_protocol='s3',
+        target_options=dict(compression='gzip'),
         remote_options={
             'anon': False,
             'default_fill_cache': False,
@@ -49,11 +49,7 @@ def get_timeseries_over_aoi(
         file_system=fs,
         target_files=target_files,
     )
-    # identification = open_zarr_store(
-    #     file_system=fs,
-    #     target_files=target_files,
-    #     group='identification',
-    # )
+
     _calc_temporal_offsets(values)
 
     if isinstance(geometry, Point):
@@ -69,6 +65,10 @@ def _read_layers_at_pixel(dataset: xr.Dataset, lat: float, lon: float) -> xr.Dat
     # reprojects lon lat to dataset projection, returns dict with reading at each layer
     crs = get_crs(dataset)
     xx, yy = _to_crs(lat, lon, target_proj=crs.to_epsg())
+
+    # TODO: Explore opening only one frame, find array index of points, then use those 
+    # indexes to read the remaining timesteps so we can skip `nearest` interpolation
+    # (assuming all data in uniformly alligned over a frame id, which should be the case)
     return dataset[_data_variables].sel(x=xx, y=yy, method='nearest')
 
 
@@ -87,7 +87,17 @@ def _read_layers_with_aoi(dataset: xr.Dataset, geometry: BaseGeometry):
 
     d = {'col1': ['aoi'], 'geometry': [projected]}
     gdf = gpd.GeoDataFrame(d, crs=str(epsg))  # type: ignore
-    print(gdf)
+
+    # clip_box limits the clipped geometry to the aoi bounds, 
+    # otherwise rioxarray will load THE ENTIRE DATASET FOOTPRINT into memory.
+    # Not a perfect solution, as any shape that isn't perfectly aligned with
+    # bounding dimensions will lead to more remote reads than necessary
+    # ex: the trianges between a bounding box and a rotated square will be 
+    # loaded by `clip()`
+
+    # TODO: Explore opening only one frame, clipping it, then use those 
+    # indexes to read the remaining timesteps without loading the extra data
+    # (assuming all data in uniformly alligned over a frame id, which should be the case)
     clipped_box = dataset.rio.clip_box(*projected.bounds)
     output = clipped_box.rio.clip(gdf.geometry.values, gdf.crs, drop=True)
     return output.mean(['x', 'y'])
@@ -120,12 +130,10 @@ def _calc_temporal_offsets(data: xr.Dataset) -> Tuple[xr.DataArray, xr.DataArray
 
 
 def _pandas_output(data: xr.Dataset):
+    data = data.sortby('secondary_datetime')
     pandas_values = data.to_pandas()
-    pandas_values = pandas_values.assign(
-        file_name=pandas_values['netcdf_uri'].map(lambda uri: uri.split('/')[-1])
-    )
 
     # sort by time, make fileName column the index for our data for nicer json output
-    pandas_values = pandas_values.sort_index().reset_index().set_index('file_name')
+    pandas_values = pandas_values.reset_index().set_index('source_file_name')
     pandas_values.loc['mean'] = pandas_values.mean(skipna=True, numeric_only=True)
     return pandas_values.to_json(date_format='iso', orient='index')

@@ -2,24 +2,18 @@ import logging
 import os
 from typing import Optional
 from fastapi import HTTPException
+import fsspec
 import numpy as np
 import rasterio
 import xarray as xr
 import numpy.typing as npt
-import zarr
-
-import ujson
 import io
 from PIL import Image
 
 # from fsspec.implementations.local import S3FileSystem
 from s3fs.core import S3FileSystem
-import zarr.hierarchy
 
 from src.models import FsspecParams
-from kerchunk.hdf import SingleHdf5ToZarr
-from kerchunk.combine import MultiZarrToZarr, drop
-import h5py
 
 cwd = os.getcwd()
 test_path = os.path.join(cwd, 'tests')
@@ -74,6 +68,24 @@ def open_zarr_store(
     return dataset
 
 
+def get_bounding_polygon(file_uri: str):
+    fs = fsspec.filesystem(
+        'reference',
+        **{
+            'fo': file_uri,
+            'remote_protocol': 's3',
+            'compression': 'gzip',
+            'remote_options': {'anon': False},
+        },
+        # One line required to specify compression here
+        target_options={'compression': 'gzip'},
+    )
+    identity = xr.open_dataset(
+        fs.get_mapper(), engine='zarr', consolidated=False, group='identification'
+    )
+    return identity['bounding_polygon'][0].item().decode()
+
+
 def read_layer_as_png_buffer(file_name: str, layer: str) -> io.BytesIO:
     data = open_dataset(file_name=file_name)
     formatted = np.array(data[layer][:], dtype=np.float32)
@@ -121,75 +133,3 @@ def _normalize(data: npt.NDArray) -> npt.NDArray:
 
     # normalize
     return (data - lower) / ptp
-
-
-def kerchunkify_file(
-    file_uri: str,
-    s3_file_system: S3FileSystem = S3FileSystem(),
-    product_version: str = '1.0',
-    storage_options: dict = {
-        'mode': 'rb',
-        'anon': False,
-        'default_fill_cache': False,
-        'default_cache_type': 'first',
-        'default_block_size': 1024 * 1024,
-    },
-) -> bytes:
-    with s3_file_system.open(file_uri, **storage_options) as infile:
-        dataset = h5py.File(infile, 'r')
-        reference_datetime = dataset['identification']['reference_datetime'][()]
-        secondary_datetime = dataset['identification']['secondary_datetime'][()]
-        h5_chunks = SingleHdf5ToZarr(infile, file_uri, inline_threshold=300)  # type: ignore (infile)
-        file_size = infile.size  # type: ignore (infline.size)
-
-        # store uri, size, file_name, product version, reference/secondary datetimes of file in root group
-        zarr_store = zarr.hierarchy.open_group(h5_chunks.store)
-        source_file_name = file_uri.split('/')[-1]
-        _add_data_variable(zarr_store, 'netcdf_uri', data=file_uri, dtype=str)
-        _add_data_variable(zarr_store, 'bytes', data=file_size, dtype=float)
-        _add_data_variable(zarr_store, 'source_file_name', data=source_file_name, dtype=str)
-        _add_data_variable(zarr_store, 'product_version', data=product_version, dtype=str)
-        _add_data_variable(
-            zarr_store,
-            'reference_datetime',
-            data=reference_datetime,
-            dtype=np.dtype('datetime64[ns]'),
-        )
-        _add_data_variable(
-            zarr_store,
-            'secondary_datetime',
-            data=secondary_datetime,
-            dtype=np.dtype('datetime64[ns]'),
-        )
-        return ujson.dumps(h5_chunks.translate()).encode()
-
-
-def _add_data_variable(store: zarr.hierarchy.Group, key: str, data, dtype: type):
-    store.create_dataset(key, data=data, dtype=dtype)
-
-    # xarray won't be able to open the store without '_ARRAY_DIMENSIONS' attribute
-    store[key].attrs['_ARRAY_DIMENSIONS'] = []
-
-
-def kerchunkify_stack(
-    zarr_uris: list[str],
-    storage_options: dict = {
-        'mode': 'rb',
-        'anon': False,
-        'default_fill_cache': False,
-        'default_cache_type': 'first',
-        'block_size': 24 * 1024 * 1024,
-    },
-) -> bytes:
-    drop_time = drop('time')
-    zarr_chunks = MultiZarrToZarr(
-        zarr_uris,
-        target_options=storage_options,
-        remote_protocol='s3',
-        concat_dims=['source_file_name'],
-        identical_dims=['y', 'x'],
-        preprocess=drop_time,
-    )
-    multi_zarr_store = zarr_chunks.translate()
-
-    return ujson.dumps(multi_zarr_store).encode()
