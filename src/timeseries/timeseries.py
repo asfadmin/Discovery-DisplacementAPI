@@ -1,6 +1,7 @@
 # import rasterio
 from typing import Tuple
 import fsspec
+import numpy as np
 from shapely import LineString, Point, Polygon
 from src.HDF.data_reader import open_zarr_store, get_crs
 from pyproj import CRS, Transformer
@@ -64,11 +65,9 @@ def _read_layers_at_pixel(dataset: xr.Dataset, lat: float, lon: float) -> xr.Dat
     # reprojects lon lat to dataset projection, returns dict with reading at each layer
     crs = get_crs(dataset)
     xx, yy = _to_crs(lat, lon, target_proj=crs.to_epsg())
-
-    # TODO: Explore opening only one frame, find array index of points, then use those 
-    # indexes to read the remaining timesteps so we can skip `nearest` interpolation
-    # (assuming all data in uniformly alligned over a frame id, which should be the case)
-    return dataset[_data_variables].sel(x=xx, y=yy, method='nearest')
+    xx_index = np.abs(dataset.x.data - xx).argmin()
+    yy_index = np.abs(dataset.y.data - yy).argmin()
+    return dataset[_data_variables].isel(x=xx_index, y=yy_index)
 
 
 def _read_layers_with_aoi(dataset: xr.Dataset, geometry: BaseGeometry):
