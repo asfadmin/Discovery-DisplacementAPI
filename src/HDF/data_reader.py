@@ -35,7 +35,6 @@ def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
             fsspec_file,  # type: ignore
             group=group,
             engine='h5netcdf',
-            chunks={},
         )
     except Exception as e:
         raise HTTPException(400, f'Failed to read field name {file_name}: {e}')
@@ -56,7 +55,6 @@ def open_zarr_store(
         m,  # type: ignore
         engine='zarr',
         backend_kwargs={'consolidated': False, 'group': group},
-        chunks={},
     )
 
     # https://github.com/pydata/xarray/issues/3124
