@@ -14,9 +14,6 @@ layer_types = [
     # FIXME go back to using when using new test data
     # 'short_wavelength_displacement',
     'unwrapped_phase',
-    'interferometric_correlation',
-    'temporal_coherence',
-    'persistent_scatterer_mask',
 ]
 
 _data_variables = [
