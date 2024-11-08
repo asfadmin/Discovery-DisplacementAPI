@@ -11,7 +11,9 @@ from shapely.geometry.base import BaseGeometry
 import geopandas as gpd
 
 layer_types = [
-    'short_wavelength_displacement',
+    # FIXME go back to using when using new test data
+    # 'short_wavelength_displacement',
+    'unwrapped_phase',
     'interferometric_correlation',
     'temporal_coherence',
     'persistent_scatterer_mask',
