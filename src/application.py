@@ -1,6 +1,7 @@
 import json
 
 from fastapi import APIRouter, FastAPI, HTTPException, Response
+from pathlib import Path
 
 import logging
 
@@ -140,9 +141,10 @@ def get_timeseries(series: TimeSeriesModel):
     description='Returns a json zarr store bytes',
 )
 def get_frame_ids(wkt_event: WKTModel):
+    frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
     wkt = wkt_event.wkt
     geometry = shapely_wkt.loads(wkt)
-    gdf = gpd.read_file('frames.geojson', engine='pyogrio')
+    gdf = gpd.read_file(frame_path, engine='pyogrio')
     result = gdf[gdf.intersects(geometry)]
     frame_ids = set(result['frame_id'])
 
