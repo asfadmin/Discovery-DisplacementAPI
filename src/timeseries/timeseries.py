@@ -12,13 +12,12 @@ from shapely.geometry.base import BaseGeometry
 import geopandas as gpd
 
 layer_types = [
-    # FIXME go back to using when using new test data
-    # 'short_wavelength_displacement',
-    'unwrapped_phase',
+    'short_wavelength_displacement'
 ]
 
 _data_variables = [
-    *layer_types,
+    # FIXME uncomment when no longer using old staged data 
+    # *layer_types,
     'netcdf_uri',
     'bytes',
     'reference_datetime',
@@ -67,7 +66,10 @@ def _read_layers_at_pixel(dataset: xr.Dataset, lat: float, lon: float) -> xr.Dat
     xx, yy = _to_crs(lat, lon, target_proj=crs.to_epsg())
     xx_index = np.abs(dataset.x.data - xx).argmin()
     yy_index = np.abs(dataset.y.data - yy).argmin()
-    return dataset[_data_variables].isel(x=xx_index, y=yy_index)
+    # FIXME remove when no longer using old staged data
+    important_variable = 'unwrapped_phase' if 'unwrapped_phase' in list(dataset.data_vars) else 'short_wavelength_displacement'
+    data_variables = [important_variable] + _data_variables
+    return dataset[data_variables].isel(x=xx_index, y=yy_index)
 
 
 def _read_layers_with_aoi(dataset: xr.Dataset, geometry: BaseGeometry):
