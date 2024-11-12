@@ -1,6 +1,7 @@
 import json
 
 from fastapi import APIRouter, FastAPI, HTTPException, Response
+from pathlib import Path
 
 import logging
 
@@ -17,8 +18,7 @@ from src.models import (
 from src.timeseries import layer_types, get_timeseries_over_aoi
 from src.HDF import read_layer_as_png_buffer
 import s3fs
-
-import asf_search as asf
+import geopandas as gpd
 
 from . import log_router
 from shapely import wkt as shapely_wkt
@@ -141,19 +141,12 @@ def get_timeseries(series: TimeSeriesModel):
     description='Returns a json zarr store bytes',
 )
 def get_frame_ids(wkt_event: WKTModel):
+    frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
     wkt = wkt_event.wkt
-    try:
-        response = asf.search(intersectsWith=wkt, dataset=asf.DATASET.OPERA_S1, maxResults=250)
-    except asf.ASFSearchError as exc:
-        raise HTTPException(
-            status_code=500, detail=f'Failed to find frame(s) for given wkt. Reason: {exc}'
-        )
-
-    frame_ids = {
-        burst_id
-        for product in response
-        if (burst_id := product.properties.get('operaBurstID')) is not None
-    }
+    geometry = shapely_wkt.loads(wkt)
+    gdf = gpd.read_file(frame_path, engine='pyogrio')
+    result = gdf[gdf.intersects(geometry)]
+    frame_ids = set(result['frame_id'])
 
     if len(frame_ids) == 0:
         raise HTTPException(

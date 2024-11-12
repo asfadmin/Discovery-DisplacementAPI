@@ -132,3 +132,4 @@ dmypy.json
 .vscode/
 
 tests/sample_products/
+data/*gpkg
