@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 class FsspecParams(BaseModel):
     default_cache_type: Optional[str] = 'blockcache'
-    default_block_size: Optional[int] = 24 * 1024 * 1024  # could be bigger
+    default_block_size: Optional[int] = 64 * 1024 * 1024  # could be bigger
 
 
 class TimeSeriesModel(BaseModel):
