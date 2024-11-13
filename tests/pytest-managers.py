@@ -15,7 +15,7 @@ reader_configs = {
     },
 }
 
-local_url = 'http://127.0.0.1:8080'
+local_url = 'http://127.0.0.1:8000'
 timeseries_endpoint = '/timeseries'
 
 

@@ -7,10 +7,10 @@ ENV HOST=${HOST}
 ARG PORT=8080
 ENV PORT=${PORT}
 
-RUN apt update \
-    && apt install -y gdal-bin libgdal-dev \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt update
+RUN apt install -y gdal-bin libgdal-dev 
+RUN apt clean 
+RUN rm -rf /var/lib/apt/lists/*
 
 COPY ./src/requirements.txt ./
 RUN uv pip install --system --no-cache-dir --upgrade -r ./requirements.txt
