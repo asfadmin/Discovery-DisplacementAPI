@@ -3,6 +3,7 @@ from aws_cdk import (
     Stack,
     aws_lambda as _lambda,
 )
+from aws_cdk.aws_ecr_assets import Platform
 from constructs import Construct
 
 
@@ -24,10 +25,14 @@ class CdkOperaDispStack(Stack):
         self.opera_timeseries_function = _lambda.DockerImageFunction(
             self,
             'DispServiceDockerFunction',
-            code=_lambda.DockerImageCode.from_image_asset(dockerfileDir),
+            code=_lambda.DockerImageCode.from_image_asset(
+                dockerfileDir,
+                platform=Platform.LINUX_ARM64,
+            ),
             function_name='DispServiceDockerAPIFunction',
             timeout=Duration.seconds(30),
             memory_size=10240,
+            architecture=_lambda.Architecture.ARM_64,
         )
 
         self.lambda_function_url = self.opera_timeseries_function.add_function_url(
