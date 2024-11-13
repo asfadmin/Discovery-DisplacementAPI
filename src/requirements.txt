@@ -1,4 +1,5 @@
-uvicorn==0.28.0
+aws-cdk-lib==2.166.0
+constructs==10.4.2
 fastapi==0.110.0
 numpy==1.26.4
 xarray==2024.2.0
@@ -15,4 +16,3 @@ ujson
 cftime
 geopandas
 rioxarray
-# aws-cdk-lib

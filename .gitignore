@@ -133,3 +133,5 @@ dmypy.json
 
 tests/sample_products/
 data/*gpkg
+
+cdk.out/
