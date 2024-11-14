@@ -1,3 +1,5 @@
+import json
+
 from aws_cdk import (
     Duration,
     Stack,
@@ -49,7 +51,7 @@ class CdkOperaDispStack(Stack):
                         retention=logs.RetentionDays.THREE_MONTHS,
                     )
                 ),
-                access_log_format={
+                access_log_format=apigateway.AccessLogFormat.custom(json.dumps({
                     'sourceIp': '$context.identity.sourceIp',
                     'httpMethod': '$context.httpMethod',
                     'path': '$context.path',
@@ -60,6 +62,6 @@ class CdkOperaDispStack(Stack):
                     'protocol': '$context.protocol',
                     'userAgent': '$context.identity.userAgent',
                     'requestId': '$context.requestId',
-                }
+                })),
             )
         )
