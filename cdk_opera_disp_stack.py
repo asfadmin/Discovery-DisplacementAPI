@@ -26,14 +26,12 @@ class CdkOperaDispStack(Stack):
                 dockerfileDir,
                 platform=Platform.LINUX_ARM64,
             ),
-            function_name='DispServiceDockerAPIFunction',
             timeout=Duration.seconds(30),
             memory_size=10240,
             architecture=_lambda.Architecture.ARM_64,
             log_group=logs.LogGroup(
                 self,
                 'DispServiceDockerFunctionLogGroup',
-                log_group_name='/aws/lambda/DispServiceDockerFunction',
                 retention=logs.RetentionDays.THREE_MONTHS,
             ),
         )
