@@ -3,6 +3,7 @@ from aws_cdk import (
     Stack,
     aws_apigateway as apigateway,
     aws_lambda as _lambda,
+    aws_logs as logs
 )
 from aws_cdk.aws_ecr_assets import Platform
 from constructs import Construct
@@ -29,6 +30,12 @@ class CdkOperaDispStack(Stack):
             timeout=Duration.seconds(30),
             memory_size=10240,
             architecture=_lambda.Architecture.ARM_64,
+            log_group=logs.LogGroup(
+                self,
+                'DispServiceDockerFunctionLogGroup',
+                log_group_name='/aws/lambda/DispServiceDockerFunction',
+                retention=logs.RetentionDays.THREE_MONTHS,
+            ),
         )
 
         api = apigateway.LambdaRestApi(
@@ -36,4 +43,14 @@ class CdkOperaDispStack(Stack):
             'DispServiceApi',
             handler=opera_timeseries_function,
             proxy=True,
+            deploy_options=apigateway.StageOptions(
+                access_log_destination=apigateway.LogGroupLogDestination(
+                    logs.LogGroup(
+                        self,
+                        'DispServiceApiLogGroup',
+                        log_group_name='/aws/lambda/DispServiceApi',
+                        retention=logs.RetentionDays.THREE_MONTHS,
+                    )
+                ),
+            )
         )
