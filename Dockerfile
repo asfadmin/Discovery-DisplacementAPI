@@ -7,11 +7,6 @@ RUN apt update \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-ARG HOST=127.0.0.1
-ENV HOST=${HOST}
-ARG PORT=9090
-ENV PORT=${PORT}
-
 COPY requirements.txt .
 
 RUN uv pip install --system --upgrade -r ./requirements.txt
