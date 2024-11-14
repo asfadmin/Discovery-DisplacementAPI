@@ -48,9 +48,19 @@ class CdkOperaDispStack(Stack):
                     logs.LogGroup(
                         self,
                         'DispServiceApiLogGroup',
-                        log_group_name='/aws/lambda/DispServiceApi',
                         retention=logs.RetentionDays.THREE_MONTHS,
                     )
                 ),
+                access_log_format=apigateway.AccessLogFormat.json_with_standard_fields(
+                    caller=False,
+                    http_method=True,
+                    ip=True,
+                    protocol=True,
+                    request_time=True,
+                    resource_path=True,
+                    response_length=True,
+                    status=True,
+                    user=True,
+                )
             )
         )
