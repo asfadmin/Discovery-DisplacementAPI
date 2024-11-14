@@ -1,3 +1,5 @@
+aws-cdk-lib==2.166.0
+constructs==10.4.2
 numpy==1.26.4
 xarray==2024.2.0
 pydantic
