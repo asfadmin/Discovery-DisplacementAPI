@@ -12,18 +12,22 @@ ENV HOST=${HOST}
 ARG PORT=9090
 ENV PORT=${PORT}
 
-COPY ./src ./src
-COPY ./data ./data
-
-COPY requirements.txt ./requirements.txt
+COPY requirements.txt .
 
 RUN uv pip install --system --upgrade -r ./requirements.txt
 RUN python -m pip install awslambdaric
+
+COPY ./src ./src
+COPY ./data ./data
 
 COPY README.md ./README.md
 
 LABEL maintainer="Alaska Satellite Facility Discovery Team <uaf-asf-discovery@alaska.edu>"
 
-ENTRYPOINT ["/usr/local/bin/python", "-m", "awslambdaric"]
+RUN mkdir -p /.aws-lambda-rie && curl -Lo /.aws-lambda-rie/aws-lambda-rie \
+https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie \
+&& chmod +x /.aws-lambda-rie/aws-lambda-rie 
+
+ENTRYPOINT ["/.aws-lambda-rie/aws-lambda-rie", "/usr/local/bin/python", "-m", "awslambdaric"]
 
 CMD ["src.lambda_handler.handler"]
