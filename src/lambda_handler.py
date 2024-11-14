@@ -1,6 +1,8 @@
 import serverless_wsgi
 
-from src.application import app
+from src import create_app
+
+app = create_app()
 
 serverless_wsgi.TEXT_MIME_TYPES.append('application/problem+json')
 

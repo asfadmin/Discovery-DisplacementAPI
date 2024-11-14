@@ -1,72 +1,72 @@
-from typing import Callable
 import time
 import logging
+from flask import request, g
 
-from fastapi import Response, Request
-from fastapi.routing import APIRoute
+# Configure logger
+api_logger = logging.getLogger("api_logger")
+api_logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter("[%(asctime)s] %(aws_request_id)s %(levelname)s: %(message)s"))
+api_logger.addHandler(handler)
 
-from src import api_logger
-
-
-class LoggingRoute(APIRoute):
+class LoggingMiddleware:
     """
-    APRRoute's are used to preform tasks before/after every API endpoint is hit.
-
-    This one is for logging request info for every endpoint.
+    Middleware for logging request and response information.
     """
 
-    old_factory = logging.getLogRecordFactory()
-    aws_request_id = ''
+    def __init__(self, app):
+        self.app = app
+        self.old_factory = logging.getLogRecordFactory()
+        self.aws_request_id = ""
 
     def record_factory(self, *args, **kwargs):
         """
-        Add extra info to the logger when each request hits the API.
-
-        From: https://stackoverflow.com/a/57820456
+        Add extra info to the logger for each request.
         """
         record = self.old_factory(*args, **kwargs)
         record.aws_request_id = self.aws_request_id
         return record
 
-    def get_route_handler(self) -> Callable:
+    def __call__(self, environ, start_response):
         """
-        This is called before/after every request. Mostly used
-        to add logging around every endpoint.
-
-        From: https://fastapi.tiangolo.com/advanced/custom-request-and-route/#custom-apiroute-class-in-a-router
+        The WSGI middleware to log request and response info.
         """
-        original_route_handler = super().get_route_handler()
+        with self.app.app_context():  # Explicitly push an application context
+            # Start timing
+            g.start_time = time.time()
 
-        async def custom_route_handler(request: Request) -> Response:
-            # Grab the AWS UUID and set it for every log:
-            context = request.scope.get('aws.context')
-            if context is not None:
-                self.aws_request_id = context.aws_request_id
+            # Mock AWS context handling (modify as per your use case)
+            aws_context = environ.get("HTTP_X_AMZN_TRACE_ID")
+            if aws_context:
+                self.aws_request_id = aws_context
+
+            # Update the logging factory
             logging.setLogRecordFactory(self.record_factory)
-            # Time the request itself:
-            before = time.time()
-            try:
-                response: Response = await original_route_handler(request)
-            finally:
-                # What to ALWAYS log:
-                duration = time.time() - before
+
+            def custom_start_response(status, headers, *args):
+                """
+                Add headers and calculate response time.
+                """
+                duration = time.time() - g.start_time
+                headers.append(("X-Response-Time", str(duration)))
                 api_logger.info(
-                    'Query finished running.',
+                    "Query finished running.",
                     extra={
-                        'QueryTime': duration,
-                        'QueryParams': dict(request.query_params),
-                        'Endpoint': request.scope['path'],
+                        "QueryTime": duration,
+                        "QueryParams": request.args.to_dict(),
+                        "Endpoint": request.path,
                     },
                 )
-            # What to log if the query was successful:
+                return start_response(status, headers, *args)
+
+            response = self.app(environ, custom_start_response)
+
+            # Log successful queries
             api_logger.info(
-                'Query was successful!',
+                "Query was successful!",
                 extra={
-                    'media_type': response.media_type,
+                    "media_type": response.content_type if hasattr(response, "content_type") else "unknown",
                 },
             )
-            # An example on adding headers. IDK if we actually need this one:
-            response.headers['X-Response-Time'] = str(duration)
-            return response
 
-        return custom_route_handler
+            return response

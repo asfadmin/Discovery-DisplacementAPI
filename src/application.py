@@ -1,6 +1,6 @@
 import json
 import logging
-from flask import Flask, jsonify, request, Response
+from flask import Blueprint, jsonify, request, Response
 from pathlib import Path
 from pydantic import BaseModel
 from flask_cors import CORS
@@ -11,23 +11,21 @@ from shapely import wkt as shapely_wkt
 from src.models import FsspecParams, TimeSeriesModel, WKTModel
 from src.timeseries import layer_types, get_timeseries_over_aoi
 from src.HDF import read_layer_as_png_buffer
+from src.log_router import LoggingMiddleware
 
-# Create Flask app
-app = Flask(__name__)
-
-# Add CORS middleware
-CORS(app, resources={r"/*": {"origins": "*"}})
+# Create a blueprint for routes
+api_blueprint = Blueprint('api', __name__)
 
 DEFAULT_HEADERS = {
     'Access-Control-Allow-Origin': '*',
 }
 
-@app.route('/', methods=['GET'])
+@api_blueprint.route('/', methods=['GET'])
 def read_root():
     return jsonify({'Status': 'A-Okay'})
 
 
-@app.route('/items', methods=['GET'])
+@api_blueprint.route('/items', methods=['GET'])
 def get_items_list():
     """(For Development Only): Returns a json response with a list of files available to read from"""
     s3 = s3fs.S3FileSystem()
@@ -39,7 +37,7 @@ def get_items_list():
     )
 
 
-@app.route('/items/layers', methods=['POST'])
+@api_blueprint.route('/items/layers', methods=['POST'])
 def read_item():
     """(For Development Only): Reads a layer from a file and converts it to a PNG buffer"""
     data = request.get_json()
@@ -60,7 +58,7 @@ def read_item():
     )
 
 
-@app.route('/items/wkt', methods=['GET'])
+@api_blueprint.route('/items/wkt', methods=['GET'])
 def get_wkt():
     """(For Development Only): Returns a static WKT response"""
     return jsonify({
@@ -69,7 +67,7 @@ def get_wkt():
     }), 200, DEFAULT_HEADERS
 
 
-@app.route('/timeseries', methods=['POST'])
+@api_blueprint.route('/timeseries', methods=['POST'])
 def get_timeseries():
     """Returns a JSON response with values read from specified layers"""
     series_data = request.get_json()
@@ -95,7 +93,7 @@ def get_timeseries():
     return Response(response=output_str, mimetype='application/json', headers=DEFAULT_HEADERS)
 
 
-@app.route('/get_frame_id', methods=['POST'])
+@api_blueprint.route('/get_frame_id', methods=['POST'])
 def get_frame_ids():
     """Returns a JSON response with frame IDs"""
     data = request.get_json()

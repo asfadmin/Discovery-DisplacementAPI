@@ -1,26 +1,21 @@
-# pylint: disable=wrong-import-position
+from flask import Flask
+from flask_cors import CORS
+from src.log_router import LoggingMiddleware
+from src.application import api_blueprint
 
-# (api_logger needs to be created before
-# the "from . import"'s to avoid a circular import)
-# import logging
+def create_app():
+    """
+    Application factory for creating the Flask app instance.
+    """
+    app = Flask(__name__)
+    CORS(app)  # Enable CORS for the app
 
-# from fastapi import APIRouter, FastAPI
-# from fastapi.middleware.cors import CORSMiddleware
+    app.app_context()
 
-# from src import logger
-# api_logger = logger.get_logger(__name__, logging.DEBUG)
-# from src import log_router
+    # Apply custom middleware
+    app.wsgi_app = LoggingMiddleware(app.wsgi_app)
 
-# router = APIRouter(route_class=log_router.LoggingRoute)
+    # Register blueprints
+    app.register_blueprint(api_blueprint)
 
-# app = FastAPI()
-
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=['*'],
-#     allow_methods=['*'],
-#     allow_headers=['*'],
-# )
-
-# from src import models  # noqa: E402, F401
-# from src import application  # noqa: E402, F401
+    return app
