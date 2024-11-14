@@ -47,16 +47,15 @@ class LoggingMiddleware:
                 """
                 Add headers and calculate response time.
                 """
+                path = request.path
+                req_args = request.args.to_dict()
                 duration = time.time() - g.start_time
                 headers.append(("X-Response-Time", str(duration)))
+    
                 api_logger.info(
-                    "Query finished running.",
-                    extra={
-                        "QueryTime": duration,
-                        "QueryParams": request.args.to_dict(),
-                        "Endpoint": request.path,
-                    },
+                    f"Query to {path} with args {req_args} finished running with duration {duration}."
                 )
+
                 return start_response(status, headers, *args)
 
             response = self.app(environ, custom_start_response)
