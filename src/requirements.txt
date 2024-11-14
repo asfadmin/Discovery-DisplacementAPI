@@ -1,7 +1,7 @@
-uvicorn==0.28.0
-fastapi==0.110.0
 numpy==1.26.4
 xarray==2024.2.0
+pydantic
+geopandas
 rasterio==1.3.9
 h5netcdf
 python-json-logger==2.0.7
@@ -9,10 +9,10 @@ debugpy
 Pillow
 pyproj
 fsspec[s3] # for s3 file access
-# mangum
+mangum
 kerchunk
 ujson
-cftime
-geopandas
-rioxarray
-# aws-cdk-lib
+serverless-wsgi
+shapely
+flask
+flask-cors

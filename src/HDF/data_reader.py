@@ -1,7 +1,6 @@
 import logging
 import os
 from typing import Optional
-from fastapi import HTTPException
 import fsspec
 import numpy as np
 import rasterio
@@ -37,7 +36,10 @@ def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
             engine='h5netcdf',
         )
     except Exception as e:
-        raise HTTPException(400, f'Failed to read field name {file_name}: {e}')
+        return {
+            'statusCode': 400,
+            'body': f'Failed to read field name {file_name}: {e}'
+        }
 
     logging.debug(msg=f'"{file_name}" read into dataset!')
     return data

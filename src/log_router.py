@@ -5,7 +5,7 @@ import logging
 from fastapi import Response, Request
 from fastapi.routing import APIRoute
 
-from . import api_logger
+from src import api_logger
 
 
 class LoggingRoute(APIRoute):

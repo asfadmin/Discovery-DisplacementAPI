@@ -24,12 +24,12 @@ class CdkOperaDispStack(Stack):
         dockerfileDir = './'
         self.opera_timeseries_function = _lambda.DockerImageFunction(
             self,
-            'DispServiceDockerFunction',
+            'DispServiceDockerFunctionTest',
             code=_lambda.DockerImageCode.from_image_asset(
                 dockerfileDir,
                 platform=Platform.LINUX_ARM64,
             ),
-            function_name='DispServiceDockerAPIFunction',
+            function_name='DispServiceDockerAPIFunctionTest',
             timeout=Duration.seconds(30),
             memory_size=10240,
             architecture=_lambda.Architecture.ARM_64,
