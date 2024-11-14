@@ -4,7 +4,7 @@ from flask import request, g
 
 # Configure logger
 api_logger = logging.getLogger("api_logger")
-api_logger.setLevel(logging.DEBUG)
+api_logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter("[%(asctime)s] %(aws_request_id)s %(levelname)s: %(message)s"))
 api_logger.addHandler(handler)

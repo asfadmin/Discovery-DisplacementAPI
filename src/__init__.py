@@ -10,10 +10,8 @@ def create_app():
     app = Flask(__name__)
     CORS(app)  # Enable CORS for the app
 
-    app.app_context()
-
     # Apply custom middleware
-    app.wsgi_app = LoggingMiddleware(app.wsgi_app)
+    app.wsgiapp = LoggingMiddleware(app)
 
     # Register blueprints
     app.register_blueprint(api_blueprint)
