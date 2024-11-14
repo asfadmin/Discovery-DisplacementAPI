@@ -8,12 +8,11 @@ def create_app():
     Application factory for creating the Flask app instance.
     """
     app = Flask(__name__)
-    CORS(app)  # Enable CORS for the app
 
-    # Apply custom middleware
+    CORS(app)
+
     app.wsgiapp = LoggingMiddleware(app)
 
-    # Register blueprints
     app.register_blueprint(api_blueprint)
 
     return app

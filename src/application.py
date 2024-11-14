@@ -2,16 +2,14 @@ import json
 import logging
 from flask import Blueprint, jsonify, request, Response
 from pathlib import Path
-from pydantic import BaseModel
-from flask_cors import CORS
 import s3fs
 import geopandas as gpd
 from shapely import wkt as shapely_wkt
 
-from src.models import FsspecParams, TimeSeriesModel, WKTModel
+from src.models import FsspecParams, TimeSeriesModel
 from src.timeseries import layer_types, get_timeseries_over_aoi
 from src.HDF import read_layer_as_png_buffer
-from src.log_router import LoggingMiddleware
+
 
 # Create a blueprint for routes
 api_blueprint = Blueprint('api', __name__)
@@ -19,6 +17,7 @@ api_blueprint = Blueprint('api', __name__)
 DEFAULT_HEADERS = {
     'Access-Control-Allow-Origin': '*',
 }
+
 
 @api_blueprint.route('/', methods=['GET'])
 def read_root():

@@ -2,7 +2,6 @@ import time
 import logging
 from flask import request, g
 
-# Configure logger
 api_logger = logging.getLogger("api_logger")
 api_logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
@@ -31,16 +30,13 @@ class LoggingMiddleware:
         """
         The WSGI middleware to log request and response info.
         """
-        with self.app.app_context():  # Explicitly push an application context
-            # Start timing
+        with self.app.app_context():
             g.start_time = time.time()
 
-            # Mock AWS context handling (modify as per your use case)
             aws_context = environ.get("HTTP_X_AMZN_TRACE_ID")
             if aws_context:
                 self.aws_request_id = aws_context
 
-            # Update the logging factory
             logging.setLogRecordFactory(self.record_factory)
 
             def custom_start_response(status, headers, *args):
@@ -60,7 +56,6 @@ class LoggingMiddleware:
 
             response = self.app(environ, custom_start_response)
 
-            # Log successful queries
             api_logger.info(
                 "Query was successful!",
                 extra={
