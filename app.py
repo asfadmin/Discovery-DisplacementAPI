@@ -15,7 +15,7 @@ CdkOperaDispStack(
     app,
     env=env,
     description='Displacement Timeseries Stack',
-    construct_id='CdkOperaDispStackTest',
+    construct_id='CdkOperaDispStack',
     deployment_environment='test',
 )
 app.synth()
