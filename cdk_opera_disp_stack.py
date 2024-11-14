@@ -49,16 +49,17 @@ class CdkOperaDispStack(Stack):
                         retention=logs.RetentionDays.THREE_MONTHS,
                     )
                 ),
-                access_log_format=apigateway.AccessLogFormat.json_with_standard_fields(
-                    caller=False,
-                    http_method=True,
-                    ip=True,
-                    protocol=True,
-                    request_time=True,
-                    resource_path=True,
-                    response_length=True,
-                    status=True,
-                    user=True,
-                )
+                access_log_format={
+                    'sourceIp': '$context.identity.sourceIp',
+                    'httpMethod': '$context.httpMethod',
+                    'path': '$context.path',
+                    'status': '$context.status',
+                    'responseLength': '$context.responseLength',
+                    'responseLatency': '$context.responseLatency',
+                    'requestTime': '$context.requestTime',
+                    'protocol': '$context.protocol',
+                    'userAgent': '$context.identity.userAgent',
+                    'requestId': '$context.requestId',
+                }
             )
         )
