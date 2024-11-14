@@ -11,8 +11,6 @@ def create_app():
 
     CORS(app)
 
-    app.wsgiapp = LoggingMiddleware(app)
-
     app.register_blueprint(api_blueprint)
 
     return app
