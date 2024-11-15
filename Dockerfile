@@ -1,6 +1,4 @@
 FROM public.ecr.aws/docker/library/python:3.11
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.3 /lambda-adapter /opt/extensions/lambda-adapter
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 RUN apt update \
     && apt install -y gdal-bin libgdal-dev \
@@ -9,7 +7,7 @@ RUN apt update \
 
 COPY requirements.txt .
 
-RUN uv pip install --system --upgrade -r ./requirements.txt
+RUN pip install -r ./requirements.txt
 RUN python -m pip install awslambdaric
 
 COPY ./src ./src
@@ -18,6 +16,10 @@ COPY ./data ./data
 COPY README.md ./README.md
 
 LABEL maintainer="Alaska Satellite Facility Discovery Team <uaf-asf-discovery@alaska.edu>"
+
+RUN echo "import rasterio" | python \
+    && echo "import shapely" | python \
+    && echo "import geopandas" | python
 
 # For Running Locally:
 # RUN mkdir -p /.aws-lambda-rie && curl -Lo /.aws-lambda-rie/aws-lambda-rie \
