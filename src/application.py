@@ -1,5 +1,4 @@
 import json
-import logging
 from flask import Blueprint, jsonify, request, Response
 from pathlib import Path
 import s3fs
