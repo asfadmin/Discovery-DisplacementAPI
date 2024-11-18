@@ -26,8 +26,6 @@ RUN python -c 'import rasterio, shapely, geopandas'
 
 # ENTRYPOINT ["/.aws-lambda-rie/aws-lambda-rie", "/usr/local/bin/python", "-m", "awslambdaric"]
 
-RUN echo "building"
-
 ENTRYPOINT [ "/usr/local/bin/python", "-m", "awslambdaric" ]
 
 CMD [ "src.lambda_handler.handler" ]
