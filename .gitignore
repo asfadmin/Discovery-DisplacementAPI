@@ -139,3 +139,4 @@ cdk.context.json
 cdk.out/
 *.tabl.json
 cdk-integ.out.*/
+data/*gpkg
