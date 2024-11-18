@@ -7,6 +7,7 @@ import rasterio
 import xarray as xr
 import numpy.typing as npt
 import io
+from flask import jsonify
 from PIL import Image
 
 # from fsspec.implementations.local import S3FileSystem
@@ -36,10 +37,7 @@ def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
             engine='h5netcdf',
         )
     except Exception as e:
-        return {
-            'statusCode': 400,
-            'body': f'Failed to read field name {file_name}: {e}'
-        }
+        return jsonify({'error': f'Failed to read field name {file_name}: {e}'}), 400
 
     logging.debug(msg=f'"{file_name}" read into dataset!')
     return data
