@@ -22,17 +22,17 @@ class CdkOperaDispStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
         self.deployment_environment = deployment_environment
 
-        dockerfileDir = './'
+        dockerfileDir = '../'
         opera_timeseries_function = _lambda.DockerImageFunction(
             self,
             'DispServiceDockerFunction',
             code=_lambda.DockerImageCode.from_image_asset(
                 dockerfileDir,
-                # platform=Platform.LINUX_ARM64,
+                platform=Platform.LINUX_ARM64,
             ),
             timeout=Duration.seconds(30),
             memory_size=10240,
-            # architecture=_lambda.Architecture.ARM_64,
+            architecture=_lambda.Architecture.ARM_64,
             log_group=logs.LogGroup(
                 self,
                 'DispServiceDockerFunctionLogGroup',
