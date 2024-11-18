@@ -3,19 +3,7 @@ import pathlib
 import requests
 import yaml
 
-reader_configs = {
-    'driver_keywords': {
-        'page_buf_size': 32 * 1024**2,
-        'rdcc_nbytes': 64,  # 24*1024**2,
-        'rdcc_nslots': 641,
-    },
-    'fsspec_params': {
-        'cache_type': 'first',  # blockcache
-        'block_size': 1024**2 * (2 ** (16)),
-    },
-}
-
-local_url = 'http://127.0.0.1:8080'
+local_url = 'http://127.0.0.1:8000'
 timeseries_endpoint = '/timeseries'
 
 
@@ -60,14 +48,14 @@ def test_timeseries(**args) -> None:
     expected_output = expected_response.get('expected_output')
 
     if expected_output is not None:
-        expected_output = get_resource(expected_output)
+        expected_output = _get_resource(expected_output)
         body = response.json()
 
         assert sorted(body) == sorted(expected_output), f'Expected {expected_output}, got {body}'
 
 
 # Finds and loads file from yml_tests/Resouces/ if loaded field ends with .yml/yaml extension
-def get_resource(yml_file):
+def _get_resource(yml_file):
     if isinstance(yml_file, str):
         if yml_file.endswith(('.yml', '.yaml')):
             base_path = pathlib.Path(__file__).parent.resolve()
@@ -80,6 +68,6 @@ def get_resource(yml_file):
         if len(yml_file) > 0:
             if isinstance(yml_file[0], str):
                 if yml_file[0].endswith(('.yml', '.yaml')):
-                    return [get_resource(file) for file in yml_file]
+                    return [_get_resource(file) for file in yml_file]
 
     return yml_file
