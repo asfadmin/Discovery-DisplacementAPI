@@ -28,11 +28,11 @@ class CdkOperaDispStack(Stack):
             'DispServiceDockerFunction',
             code=_lambda.DockerImageCode.from_image_asset(
                 dockerfileDir,
-                platform=Platform.LINUX_ARM64,
+                # platform=Platform.LINUX_ARM64,
             ),
             timeout=Duration.seconds(30),
             memory_size=10240,
-            architecture=_lambda.Architecture.ARM_64,
+            # architecture=_lambda.Architecture.ARM_64,
             log_group=logs.LogGroup(
                 self,
                 'DispServiceDockerFunctionLogGroup',
