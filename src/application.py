@@ -67,7 +67,8 @@ def get_wkt():
 
 @api_blueprint.route('/timeseries', methods=['POST'])
 def get_timeseries():
-    """Returns a JSON response with values read from specified layers"""
+    """Returns a json response with values read at `unwrapped_phase`,
+      `interferometric_correlation`, and `temporal_coherence` layers in provided files at given point."""
     series_data = request.get_json()
     try:
         series = TimeSeriesModel(**series_data)
