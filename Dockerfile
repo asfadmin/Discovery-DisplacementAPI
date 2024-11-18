@@ -17,9 +17,7 @@ COPY README.md ./README.md
 
 LABEL maintainer="Alaska Satellite Facility Discovery Team <uaf-asf-discovery@alaska.edu>"
 
-RUN echo "import rasterio" | python \
-    && echo "import shapely" | python \
-    && echo "import geopandas" | python
+RUN python -c 'import rasterio, shapely, geopandas'
 
 # For Running Locally:
 # RUN mkdir -p /.aws-lambda-rie && curl -Lo /.aws-lambda-rie/aws-lambda-rie \
