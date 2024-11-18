@@ -7,10 +7,6 @@ def test_root(client):
     assert response.json == {'Status': 'A-Okay'}
 
 
-def test_timeseries(client):
-    assert False
-
-
 def test_get_frame_id(client):
     response = client.post('/get_frame_id', json={'wkt': 'POINT(-121.5048 38.5672)'})
     assert response.status_code == HTTPStatus.OK
