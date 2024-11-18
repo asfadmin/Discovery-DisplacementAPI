@@ -3,7 +3,6 @@
 from setuptools import find_packages, setup
 
 requirements = [
-    "fastapi",
     "numpy",
     "xarray",
     "rasterio",
