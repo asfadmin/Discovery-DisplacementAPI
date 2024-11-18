@@ -95,13 +95,17 @@ def get_timeseries():
 def get_frame_ids():
     """Returns a JSON response with frame IDs"""
     data = request.get_json()
-    wkt = data.get('wkt')
-    geometry = shapely_wkt.loads(wkt)
+    try:
+        wkt = data.get('wkt')
+        geometry = shapely_wkt.loads(wkt)
 
-    frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
-    gdf = gpd.read_file(frame_path, engine='pyogrio')
-    result = gdf[gdf.intersects(geometry)]
-    frame_ids = set(result['frame_id'])
+        frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
+        gdf = gpd.read_file(frame_path, engine='pyogrio')
+        result = gdf[gdf.intersects(geometry)]
+        frame_ids = set(result['frame_id'])
+
+    except Exception as exc:
+        return jsonify({'error': f'Failed to load WKT. Error: {exc}'}), 400
 
     if not frame_ids:
         return jsonify({'error': f'No OPERA-S1 burst frame IDs were found for the given AOI: {wkt}'}), 400
