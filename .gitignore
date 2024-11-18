@@ -134,4 +134,9 @@ dmypy.json
 tests/sample_products/
 data/*gpkg
 
+# CDK Context & Staging files
+cdk.context.json
+.cdk.staging/
 cdk.out/
+*.tabl.json
+cdk-integ.out.*/
