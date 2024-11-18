@@ -38,7 +38,7 @@ class CdkOperaDispStack(Stack):
             ),
         )
 
-        api = apigateway.LambdaRestApi(
+        apigateway.LambdaRestApi(
             self,
             'DispServiceApi',
             handler=opera_timeseries_function,
