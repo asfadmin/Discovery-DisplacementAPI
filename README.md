@@ -7,7 +7,6 @@ Run pip install from the project's root folder
     pip install -e .
 ```
 
-
-``` python
-uvicorn src.application:app --port 8080 --reload
+```
+flask --app src run --host=127.0.0.1 --port=8000
 ```
