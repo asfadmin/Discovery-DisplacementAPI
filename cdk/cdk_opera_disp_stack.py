@@ -4,8 +4,10 @@ from aws_cdk import (
     Duration,
     Stack,
     aws_apigateway as apigateway,
+    aws_codebuild as codebuild,
     aws_lambda as _lambda,
-    aws_logs as logs
+    aws_logs as logs,
+    pipelines,
 )
 from aws_cdk.aws_ecr_assets import Platform
 from constructs import Construct
@@ -20,17 +22,17 @@ class CdkOperaDispStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
         self.deployment_environment = deployment_environment
 
-        dockerfileDir = '../'
+        dockerfileDir = './'
         opera_timeseries_function = _lambda.DockerImageFunction(
             self,
             'DispServiceDockerFunction',
             code=_lambda.DockerImageCode.from_image_asset(
                 dockerfileDir,
-                platform=Platform.LINUX_ARM64,
+                # platform=Platform.LINUX_ARM64,
             ),
             timeout=Duration.seconds(30),
             memory_size=10240,
-            architecture=_lambda.Architecture.ARM_64,
+            # architecture=_lambda.Architecture.ARM_64,
             log_group=logs.LogGroup(
                 self,
                 'DispServiceDockerFunctionLogGroup',

@@ -1,0 +1,3 @@
+pytest
+pytest-automation # for pytest managers and yaml tests
+PyYAML

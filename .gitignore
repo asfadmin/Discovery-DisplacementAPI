@@ -132,7 +132,6 @@ dmypy.json
 .vscode/
 
 tests/sample_products/
-data/*gpkg
 
 # CDK Context & Staging files
 cdk.context.json
@@ -140,3 +139,4 @@ cdk.context.json
 cdk.out/
 *.tabl.json
 cdk-integ.out.*/
+data/*gpkg

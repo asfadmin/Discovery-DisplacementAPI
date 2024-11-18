@@ -1,9 +1,9 @@
 FROM public.ecr.aws/docker/library/python:3.11
 
-RUN apt update \
-    && apt install -y gdal-bin libgdal-dev \
-    && apt clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt update
+RUN apt install -y gdal-bin libgdal-dev 
+RUN apt clean 
+RUN rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 
