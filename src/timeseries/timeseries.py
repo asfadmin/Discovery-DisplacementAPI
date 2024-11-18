@@ -16,7 +16,6 @@ layer_types = [
 ]
 
 _data_variables = [
-    # FIXME uncomment when no longer using old staged data 
     *layer_types,
     'netcdf_uri',
     'bytes',
