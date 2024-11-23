@@ -29,6 +29,7 @@ jobs:
           cdk_args: '--require-approval never'
           cdk_version: '2.164.1'
           actions_comment: false
+          working_dir: 'cdk'
         env:
           AWS_ACCESS_KEY_ID: ${{ steps.creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.creds.outputs.aws-secret-access-key }}
