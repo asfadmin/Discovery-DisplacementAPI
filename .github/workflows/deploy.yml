@@ -22,6 +22,10 @@ jobs:
       - name: get caller identity 1
         run: |
           aws sts get-caller-identity
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: cdk deploy
         uses: youyo/aws-cdk-github-actions@v2
         with:
@@ -29,7 +33,6 @@ jobs:
           cdk_args: '--require-approval never'
           cdk_version: '2.164.1'
           actions_comment: false
-          working_dir: 'cdk'
         env:
           AWS_ACCESS_KEY_ID: ${{ steps.creds.outputs.aws-access-key-id }}
           AWS_SECRET_ACCESS_KEY: ${{ steps.creds.outputs.aws-secret-access-key }}

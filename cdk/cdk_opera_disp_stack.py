@@ -18,7 +18,7 @@ class CdkOperaDispStack(Stack):
         Create the Lambda Functions for the FastAPI server.
         """
 
-        dockerfileDir = '../'
+        dockerfileDir = './'
         self.opera_timeseries_function = _lambda.DockerImageFunction(
             self,
             'DispServiceDockerFunction',
