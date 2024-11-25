@@ -22,11 +22,10 @@ jobs:
       - name: get caller identity 1
         run: |
           aws sts get-caller-identity
+      - uses: actions/checkout@v4
       - name: Install Dependencies
         run: |
           python3 -m pip install -r cdk/requirements.txt
-
-      - uses: actions/checkout@v4
       - name: cdk deploy
         uses: youyo/aws-cdk-github-actions@v2
         with:
