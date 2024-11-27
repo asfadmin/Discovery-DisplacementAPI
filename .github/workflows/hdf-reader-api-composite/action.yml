@@ -42,8 +42,8 @@ runs:
     - name: Install cdk dependencies
       shell: bash
       run: |
-      python -m pip install -r cdk/requirements.txt
-      npm install -g aws-cdk
+        python -m pip install -r cdk/requirements.txt
+        npm install -g aws-cdk
 
     - 
     - name: Deploy to AWS
