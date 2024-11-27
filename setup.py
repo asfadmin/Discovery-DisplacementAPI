@@ -13,7 +13,7 @@ requirements = [
     'debugpy',
     'Pillow',
     'pyproj',
-    'fsspec[s3] # for s3 file access',
+    'fsspec[s3]', # for s3 file access
 ]
 
 test_requirements = [
@@ -21,6 +21,8 @@ test_requirements = [
     'pytest-automation',
     'PyYAML',
     'httpx',
+    'pytest-cov',
+    'coverage',
 ]
 
 with open("README.md", "r") as readme_file:
@@ -35,11 +37,11 @@ setup(
     long_description=readme,
     long_description_content_type="text/markdown",
     # url="https://github.com/asfadmin/Discovery-asf_search.git",
-    project_urls={"Documentation": "https://docs.asf.alaska.edu/asf_search/basics/"},
+    # project_urls={"Documentation": "https://docs.asf.alaska.edu/asf_search/basics/"},
     packages=find_packages(exclude=["tests.*", "tests", "examples.*", "examples", "cdk", "cdk.*"]),
     package_dir={"OperaTimeseriesAPI": "src"},
     include_package_data=True,
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     install_requires=requirements,
     extras_require={ "test": test_requirements},
     license="BSD",
@@ -52,7 +54,6 @@ setup(
         "Intended Audience :: Science/Research",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3 :: Only",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Topic :: Software Development",
         "Topic :: Scientific/Engineering :: Atmospheric Science",
