@@ -3,12 +3,24 @@
 from setuptools import find_packages, setup
 
 requirements = [
-    "uvicorn",
-    "fastapi",
-    "numpy",
-    "xarray",
-    "rasterio",
-    "python-json-logger",
+    'uvicorn==0.28.0',
+    'fastapi==0.110.0',
+    'numpy==1.26.4',
+    'xarray==2024.2.0',
+    'rasterio==1.3.9',
+    'h5netcdf',
+    'python-json-logger==2.0.7',
+    'debugpy',
+    'Pillow',
+    'pyproj',
+    'fsspec[s3] # for s3 file access',
+]
+
+test_requirements = [
+    'pytest',
+    'pytest-automation',
+    'PyYAML',
+    'httpx',
 ]
 
 with open("README.md", "r") as readme_file:
@@ -24,12 +36,12 @@ setup(
     long_description_content_type="text/markdown",
     # url="https://github.com/asfadmin/Discovery-asf_search.git",
     project_urls={"Documentation": "https://docs.asf.alaska.edu/asf_search/basics/"},
-    packages=find_packages(exclude=["tests.*", "tests", "examples.*", "examples"]),
+    packages=find_packages(exclude=["tests.*", "tests", "examples.*", "examples", "cdk", "cdk.*"]),
     package_dir={"OperaTimeseriesAPI": "src"},
     include_package_data=True,
     python_requires=">=3.8",
     install_requires=requirements,
-    # extras_require={ "test": test_requirements, "extras": extra_requirements},
+    extras_require={ "test": test_requirements},
     license="BSD",
     license_files=("LICENSE",),
     classifiers=[

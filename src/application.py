@@ -8,7 +8,6 @@ import logging
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-# from mangum import Mangum
 from pydantic import BaseModel
 from src.models import (
     FsspecParams,
