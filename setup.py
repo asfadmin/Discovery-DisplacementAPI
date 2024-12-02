@@ -13,6 +13,7 @@ requirements = [
     'debugpy',
     'Pillow',
     'pyproj',
+    'shapely',
     'fsspec[s3]', # for s3 file access
 ]
 
