@@ -12,12 +12,12 @@ requirements = [
     'python-json-logger==2.0.7',
     'debugpy',
     'Pillow',
-    'pyproj',
+    'pyproj==3.6.1',
     'shapely',
     'fsspec[s3]', # for s3 file access
     'cftime',
     'geopandas',
-    'rioxarray',
+    'rioxarray==0.17.0',
 ]
 
 test_requirements = [
