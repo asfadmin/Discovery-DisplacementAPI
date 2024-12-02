@@ -24,7 +24,7 @@ test_requirements = [
     'pytest',
     'pytest-automation',
     'PyYAML',
-    'httpx',
+    'httpx<0.28.0',
     'pytest-cov',
     'coverage',
 ]
