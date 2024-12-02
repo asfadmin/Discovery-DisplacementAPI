@@ -15,6 +15,9 @@ requirements = [
     'pyproj',
     'shapely',
     'fsspec[s3]', # for s3 file access
+    'cftime',
+    'geopandas',
+    'rioxarray',
 ]
 
 test_requirements = [
