@@ -120,17 +120,17 @@ def get_timeseries(series: TimeSeriesModel):
     if series.fsspec_params is None:
         series.fsspec_params = FsspecParams()
 
-    # try:
-    output_str = get_timeseries_over_aoi(
-        geometry=geometry,
-        file_store=file_store,
-        target_files=target_files,
-        fsspec_params=series.fsspec_params,
-    )
-    # except BaseException as exc:
-    #     raise HTTPException(
-    #         500, detail=f'Failed to calculate timeseries. Original Exception: {exc}'
-    #     )
+    try:
+        output_str = get_timeseries_over_aoi(
+            geometry=geometry,
+            file_store=file_store,
+            target_files=target_files,
+            fsspec_params=series.fsspec_params,
+        )
+    except BaseException as exc:
+        raise HTTPException(
+            500, detail=f'Failed to calculate timeseries. Original Exception: {exc}'
+        )
 
     return Response(content=output_str, media_type='application/json', headers=DEFAULT_HEADERS)
 
