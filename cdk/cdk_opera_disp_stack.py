@@ -39,7 +39,8 @@ class CdkOperaDispStack(Stack):
         )
 
         dockerfileDir = '../'
-        opera_timeseries_function = _lambda.DockerImageFunction(
+        dockerfileDir = '../'
+        self.opera_timeseries_function = _lambda.DockerImageFunction(
             self,
             'DispServiceDockerFunction',
             code=_lambda.DockerImageCode.from_image_asset(
@@ -62,7 +63,7 @@ class CdkOperaDispStack(Stack):
         apigateway.LambdaRestApi(
             self,
             'DispServiceApi',
-            handler=opera_timeseries_function,
+            handler=self.opera_timeseries_function,
             proxy=True,
             endpoint_configuration=apigateway.EndpointConfiguration(
                 # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
