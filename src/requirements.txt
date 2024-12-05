@@ -12,3 +12,4 @@ fsspec[s3] # for s3 file access
 cftime
 geopandas
 rioxarray
+kerchunk

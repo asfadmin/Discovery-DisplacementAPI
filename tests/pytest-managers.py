@@ -1,14 +1,11 @@
 import os
 import pathlib
-from fastapi.testclient import TestClient
-
+import requests
 import yaml
 
-from src.application import app
-
+local_url = 'http://127.0.0.1:8000'
 timeseries_endpoint = '/timeseries'
 
-client = TestClient(app)
 
 def test_timeseries(**args) -> None:
     test_info = args['test_info']
@@ -36,7 +33,7 @@ def test_timeseries(**args) -> None:
         'driver_keywords': driver_keywords,
     }
 
-    response = client.post(timeseries_endpoint, json=test_data)
+    response = requests.post(url=f'{local_url}{timeseries_endpoint}', json=test_data)
 
     if status_code == 200:
         try:

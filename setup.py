@@ -18,6 +18,7 @@ requirements = [
     'cftime',
     'geopandas',
     'rioxarray==0.17.0',
+    'kerchunk',
 ]
 
 test_requirements = [
