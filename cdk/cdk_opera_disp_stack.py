@@ -4,12 +4,10 @@ from aws_cdk import (
     Duration,
     Stack,
     aws_apigateway as apigateway,
-    aws_codebuild as codebuild,
     aws_lambda as _lambda,
     aws_logs as logs,
-    pipelines,
+    aws_ec2 as ec2,
 )
-from aws_cdk.aws_ecr_assets import Platform
 from constructs import Construct
 
 
@@ -21,6 +19,24 @@ class CdkOperaDispStack(Stack):
 
         super().__init__(scope, construct_id, **kwargs)
         self.deployment_environment = deployment_environment
+
+        vpc_id = self.node.try_get_context('vpc_id')
+        subnet_ids = self.node.try_get_context('subnet_ids').split(',')
+        security_group = self.node.try_get_context('security_group')
+
+        vpc = ec2.Vpc.from_lookup(self, "EDCVPC", vpc_id=vpc_id)
+        subnet_selection = ec2.SubnetSelection(
+            subnet_filters=[
+                ec2.SubnetFilter.by_ids(
+                    subnet_ids=subnet_ids
+                )
+            ]
+        )
+        security_group = ec2.SecurityGroup.from_security_group_id(
+            self,
+            'EDCSecurityGroup',
+            security_group
+        )
 
         dockerfileDir = '../'
         opera_timeseries_function = _lambda.DockerImageFunction(
@@ -38,6 +54,9 @@ class CdkOperaDispStack(Stack):
                 'DispServiceDockerFunctionLogGroup',
                 retention=logs.RetentionDays.THREE_MONTHS,
             ),
+            vpc=vpc,
+            vpc_subnets=subnet_selection,
+            security_groups=[security_group],
         )
 
         apigateway.LambdaRestApi(
@@ -45,6 +64,10 @@ class CdkOperaDispStack(Stack):
             'DispServiceApi',
             handler=opera_timeseries_function,
             proxy=True,
+            endpoint_configuration=apigateway.EndpointConfiguration(
+                # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
+                types=[apigateway.EndpointType.PRIVATE]
+            ),
             deploy_options=apigateway.StageOptions(
                 access_log_destination=apigateway.LogGroupLogDestination(
                     logs.LogGroup(
