@@ -3,7 +3,7 @@ name: HDFReaderAPI deploy action (prod)
 on:
   push:
     branches:
-      - prod
+      - edc-deploy
 
 jobs:
   deploy:
