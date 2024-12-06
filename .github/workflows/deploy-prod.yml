@@ -8,7 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: prod
+    environment: edc-prod
     permissions:
       id-token: write
       contents: read
@@ -21,3 +21,6 @@ jobs:
         uses: ./.github/workflows/hdf-reader-api-composite
         with:
           aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          vpc-id: ${{ secrets.VPC_ID }}
+          subnet-ids: ${{ secrets.SUBNET_IDS }}
+          security-group: ${{ secrets.SECURITY_GROUP }}

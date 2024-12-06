@@ -3,13 +3,12 @@ name: HDFReaderAPI deploy action (test)
 on:
   push:
     branches:
-      - test
-      - main
+      - edc-deploy
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: test
+    environment: edc-test
     permissions:
       id-token: write
       contents: read
@@ -22,3 +21,6 @@ jobs:
         uses: ./.github/workflows/hdf-reader-api-composite
         with:
           aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          vpc-id: ${{ secrets.VPC_ID }}
+          subnet-ids: ${{ secrets.SUBNET_IDS }}
+          security-group: ${{ secrets.SECURITY_GROUP }}
