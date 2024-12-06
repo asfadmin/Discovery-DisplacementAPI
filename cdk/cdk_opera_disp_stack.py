@@ -39,7 +39,6 @@ class CdkOperaDispStack(Stack):
         )
 
         dockerfileDir = '../'
-        dockerfileDir = '../'
         self.opera_timeseries_function = _lambda.DockerImageFunction(
             self,
             'DispServiceDockerFunction',
