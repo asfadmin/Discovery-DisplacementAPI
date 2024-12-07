@@ -67,14 +67,10 @@ class CdkOperaDispStack(Stack):
                 dockerfileDir,
                 # platform=Platform.LINUX_ARM64,
             ),
+            function_name='DispServiceDockerAPIFunction',
             timeout=Duration.seconds(30),
             memory_size=10240,
             # architecture=_lambda.Architecture.ARM_64,
-            log_group=logs.LogGroup(
-                self,
-                'DispServiceDockerFunctionLogGroup',
-                retention=logs.RetentionDays.THREE_MONTHS,
-            ),
             **lambda_vpc_kwargs
         )
 
@@ -83,6 +79,10 @@ class CdkOperaDispStack(Stack):
             'DispServiceApi',
             handler=self.opera_timeseries_function,
             proxy=True,
+            default_cors_preflight_options=apigateway.CorsOptions(
+                allow_origins=apigateway.Cors.ALL_ORIGINS,
+                allow_methods=apigateway.Cors.ALL_METHODS
+            ),
             deploy_options=apigateway.StageOptions(
                 access_log_destination=apigateway.LogGroupLogDestination(
                     logs.LogGroup(
