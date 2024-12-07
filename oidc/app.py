@@ -14,7 +14,7 @@ env = cdk.Environment(
 CdkOIDCRoleStack(
     app,
     env=env,
-    description='OIDC Role Stack',
-    construct_id='CdkOperaDispStack',
+    description='OIDC HDFReader Role Stack',
+    construct_id='OIDCHDFReaderRoleStack',
 )
 app.synth()
