@@ -20,23 +20,44 @@ class CdkOperaDispStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
         self.deployment_environment = deployment_environment
 
-        vpc_id = self.node.try_get_context('vpc_id')
-        subnet_ids = self.node.try_get_context('subnet_ids').split(',')
-        security_group = self.node.try_get_context('security_group')
+        try:
+            vpc_id = self.node.try_get_context('vpc_id')
+            subnet_ids = self.node.try_get_context('subnet_ids').split(',')
+            security_group = self.node.try_get_context('security_group')
 
-        vpc = ec2.Vpc.from_lookup(self, "EDCVPC", vpc_id=vpc_id)
-        subnet_selection = ec2.SubnetSelection(
-            subnet_filters=[
-                ec2.SubnetFilter.by_ids(
-                    subnet_ids=subnet_ids
-                )
-            ]
-        )
-        security_group = ec2.SecurityGroup.from_security_group_id(
-            self,
-            'EDCSecurityGroup',
-            security_group
-        )
+            if not vpc_id:
+                raise AttributeError()
+
+        except AttributeError:
+            lambda_vpc_kwargs = {}
+            apigateway_kwargs = {}
+        else:
+            vpc = ec2.Vpc.from_lookup(self, "EDCVPC", vpc_id=vpc_id)
+            subnet_selection = ec2.SubnetSelection(
+                subnet_filters=[
+                    ec2.SubnetFilter.by_ids(
+                        subnet_ids=subnet_ids
+                    )
+                ]
+            )
+            security_group = ec2.SecurityGroup.from_security_group_id(
+                self,
+                'EDCSecurityGroup',
+                security_group
+            )
+
+            lambda_vpc_kwargs = {
+                'vpc': vpc,
+                'vpc_subnets': subnet_selection,
+                'security_groups': [security_group],
+            }
+
+            apigateway_kwargs = {
+                'endpoint_configuration': apigateway.EndpointConfiguration(
+                    # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
+                    types=[apigateway.EndpointType.PRIVATE]
+                ),
+            }
 
         dockerfileDir = '../'
         self.opera_timeseries_function = _lambda.DockerImageFunction(
@@ -54,9 +75,7 @@ class CdkOperaDispStack(Stack):
                 'DispServiceDockerFunctionLogGroup',
                 retention=logs.RetentionDays.THREE_MONTHS,
             ),
-            vpc=vpc,
-            vpc_subnets=subnet_selection,
-            security_groups=[security_group],
+            **lambda_vpc_kwargs
         )
 
         apigateway.LambdaRestApi(
@@ -64,10 +83,6 @@ class CdkOperaDispStack(Stack):
             'DispServiceApi',
             handler=self.opera_timeseries_function,
             proxy=True,
-            endpoint_configuration=apigateway.EndpointConfiguration(
-                # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
-                types=[apigateway.EndpointType.PRIVATE]
-            ),
             deploy_options=apigateway.StageOptions(
                 access_log_destination=apigateway.LogGroupLogDestination(
                     logs.LogGroup(
@@ -88,5 +103,6 @@ class CdkOperaDispStack(Stack):
                     'userAgent': '$context.identity.userAgent',
                     'requestId': '$context.requestId',
                 })),
-            )
+            ),
+            **apigateway_kwargs
         )
