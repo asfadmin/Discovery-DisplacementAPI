@@ -14,11 +14,11 @@ class CdkOIDCRoleStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # Only needs to be done once per account
-        # self.oidc_role_template = cfn_inc.CfnInclude(
-        #     self,
-        #     "OIDCProviderTemplate",
-        #     template_file="oidc-provider.yml"
-        # )
+        self.oidc_role_template = cfn_inc.CfnInclude(
+            self,
+            "OIDCProviderTemplate",
+            template_file="oidc-provider.yml"
+        )
 
         self.oidc_role_template = cfn_inc.CfnInclude(
             self,
