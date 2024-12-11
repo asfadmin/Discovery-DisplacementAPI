@@ -29,7 +29,6 @@ _data_variables = [
 def get_timeseries_over_aoi(
     geometry: BaseGeometry,
     file_store: str,
-    target_files: list[str],
     fsspec_params: FsspecParams,
 ) -> str:
     fs = fsspec.filesystem(
@@ -45,8 +44,7 @@ def get_timeseries_over_aoi(
         },
     )
     values = open_zarr_store(
-        file_system=fs,
-        target_files=target_files,
+        file_system=fs
     )
 
     _calc_temporal_offsets(values)

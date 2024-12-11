@@ -9,10 +9,7 @@ debugpy
 Pillow
 pyproj
 fsspec[s3] # for s3 file access
-# mangum
-kerchunk
-ujson
 cftime
 geopandas
 rioxarray
-# aws-cdk-lib
+kerchunk

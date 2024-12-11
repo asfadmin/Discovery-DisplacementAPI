@@ -44,7 +44,7 @@ def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
 
 
 def open_zarr_store(
-    file_system: S3FileSystem, target_files: list[str] = [], group='/'
+    file_system: S3FileSystem, group='/'
 ) -> xr.Dataset:
     # Implements example from Luis López using fsspec_params and driver_config for kerchunked zarr store
     # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
@@ -56,12 +56,6 @@ def open_zarr_store(
         engine='zarr',
         backend_kwargs={'consolidated': False, 'group': group},
     )
-
-    # https://github.com/pydata/xarray/issues/3124
-    # Zarr stack is indexed by source_file_name. we can use this to pre-filter results to products
-    # we're interested in
-    if len(target_files):
-        dataset = dataset.where(dataset.source_file_name.isin(target_files), drop=True)
 
     return dataset
 

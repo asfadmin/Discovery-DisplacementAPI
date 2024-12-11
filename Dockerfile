@@ -8,8 +8,8 @@ ARG PORT=8080
 ENV PORT=${PORT}
 
 RUN apt update
-RUN apt install -y gdal-bin libgdal-dev 
-RUN apt clean 
+RUN apt install -y gdal-bin libgdal-dev
+RUN apt clean
 RUN rm -rf /var/lib/apt/lists/*
 
 COPY ./src/requirements.txt ./
