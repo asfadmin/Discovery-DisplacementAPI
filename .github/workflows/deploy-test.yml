@@ -3,8 +3,8 @@ name: HDFReaderAPI deploy action (test)
 on:
   push:
     branches:
+      - edc-deploy
       - test
-      - main
 
 jobs:
   deploy:

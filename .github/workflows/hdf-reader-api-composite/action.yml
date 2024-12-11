@@ -4,6 +4,15 @@ inputs:
   aws-account-id:
     required: true
     type: string
+  vpc-id:
+    required: false
+    type: string
+  subnet-ids:
+    required: false
+    type: string
+  security-group:
+    required: false
+    type: string
 
 runs:
   using: "composite"
@@ -14,7 +23,7 @@ runs:
     - name: Configure AWS OIDC credentials
       uses: aws-actions/configure-aws-credentials@v3
       with:
-        role-to-assume: arn:aws:iam::${{ inputs.aws-account-id }}:role/GitHubActionsRoleHDFReadertest
+        role-to-assume: arn:aws:iam::${{ inputs.aws-account-id }}:role/HDFReaderActionsOIDCRole
         aws-region: us-west-2
 
     - name: Set up Python
@@ -39,4 +48,7 @@ runs:
       shell: bash
       run: |
         cd cdk
-        cdk deploy --require-approval=never
+        cdk deploy --require-approval=never \
+          --context vpc_id=${{ inputs.vpc-id }} \
+          --context subnet_ids=${{ inputs.subnet-ids }} \
+          --context security_group=${{ inputs.security-group }}
