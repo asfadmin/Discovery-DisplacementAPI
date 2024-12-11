@@ -3,6 +3,8 @@
 from setuptools import find_packages, setup
 
 requirements = [
+    "uvicorn",
+    "fastapi",
     "numpy",
     "xarray",
     "rasterio",

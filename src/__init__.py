@@ -1,15 +1,11 @@
-from flask import Flask
-from flask_cors import CORS
-from src.application import api_blueprint
+# pylint: disable=wrong-import-position
 
-def create_app():
-    """
-    Application factory for creating the Flask app instance.
-    """
-    app = Flask(__name__)
+# (api_logger needs to be created before
+# the "from . import"'s to avoid a circular import)
+import logging
+from . import logger
 
-    CORS(app)
+api_logger = logger.get_logger(__name__, logging.DEBUG)
 
-    app.register_blueprint(api_blueprint)
-
-    return app
+from . import models  # noqa: E402, F401
+from . import application  # noqa: E402, F401
