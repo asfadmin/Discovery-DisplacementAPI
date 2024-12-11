@@ -5,9 +5,9 @@ RUN apt install -y gdal-bin libgdal-dev
 RUN apt clean
 RUN rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY ./src/requirements.txt .
 
-RUN pip install -r ./src/requirements.txt
+RUN pip install -r ./requirements.txt
 RUN python -m pip install awslambdaric
 
 COPY ./src ./src
