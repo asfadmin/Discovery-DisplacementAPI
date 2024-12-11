@@ -20,7 +20,7 @@ tests:
         file_store: ""
         wkt: POINT (0 0)
       response:
-        status_code: 400
+        status_code: 422
 
 # TODO: re-enable and update these tests for linestring/polygon aois
   # - test timeseries stack 14 files polygon in bounds:

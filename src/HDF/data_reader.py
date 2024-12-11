@@ -1,13 +1,13 @@
 import logging
 import os
 from typing import Optional
+from fastapi import HTTPException
 import fsspec
 import numpy as np
 import rasterio
 import xarray as xr
 import numpy.typing as npt
 import io
-from flask import jsonify
 from PIL import Image
 
 # from fsspec.implementations.local import S3FileSystem
@@ -37,7 +37,7 @@ def open_dataset(file_name: str, group: Optional[str] = None) -> xr.Dataset:
             engine='h5netcdf',
         )
     except Exception as e:
-        return jsonify({'error': f'Failed to read field name {file_name}: {e}'}), 400
+        raise HTTPException(400, f'Failed to read field name {file_name}: {e}')
 
     logging.debug(msg=f'"{file_name}" read into dataset!')
     return data
