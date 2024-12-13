@@ -11,13 +11,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from src.exceptions import MissingFrameException
 from src.models import (
-    FsspecParams,
     TimeSeriesModel,
-    ValidateWKTModel,
     WKTModel,
 )
-from src.timeseries import layer_types, get_timeseries_over_aoi
-from src.HDF import read_layer_as_png_buffer
+from src.timeseries import get_timeseries_over_aoi
 import s3fs
 import geopandas as gpd
 
@@ -61,30 +58,6 @@ class ReadLayer(BaseModel):
     file_name: str
     layer: str
 
-
-# TODO: Remove when working with actual data in CMR
-@app.post(
-    '/items/layers',
-    description='(For Development Only): Takes a valid file name and reads a layer from it, converted to a png with nan values as alpha channel',
-)
-def read_item(data: ReadLayer):
-    if data.layer not in layer_types:
-        raise HTTPException(
-            400,
-            f'{data.layer} is not a valid layer type. Valid Layer Types: {layer_types}',
-        )
-
-    png_buffer = read_layer_as_png_buffer(file_name=data.file_name, layer=data.layer)
-    return Response(
-        content=png_buffer.getvalue(),
-        headers={
-            'Content-Disposition': 'inline; filename="test.png"',
-            **DEFAULT_HEADERS,
-        },
-        media_type='image/png',
-    )
-
-
 # TODO: Remove when working with actual data in CMR
 @app.get(
     '/items/wkt',
@@ -114,29 +87,15 @@ def get_timeseries(series: TimeSeriesModel):
 
     logging.debug(f'wkt loaded: {geometry.wkt}')
 
-    zarr_stores = [
-        f's3://{series.bucket}/OPERA_L3_DISP-S1_IW_F{frame_id}_{series.polarization}.json.zarr.gz'
-        for frame_id in _get_frames_for_wkt(series.wkt)
-    ]
+    zarr_stores = _get_available_file_stores_for_wkt(series)
 
-    s3 = s3fs.S3FileSystem(anon=False)
-    available_zarr_stores = [zarr_store for zarr_store in zarr_stores if s3.exists(zarr_store)]
-    
-    if len(available_zarr_stores) == 0:
-        raise MissingFrameException(400, f"No data available found for the given area of interest {series.wkt}")
-    
-    file_store = available_zarr_stores[0]
+    file_store = zarr_stores[0]
     logging.info(f'using file store: {file_store}')
-
-    # logging.debug(f'Sampling timeseries at lat {lat}, lon {lon}')
-    if series.fsspec_params is None:
-        series.fsspec_params = FsspecParams()
 
     try:
         output_str = get_timeseries_over_aoi(
             geometry=geometry,
             file_store=file_store,
-            fsspec_params=series.fsspec_params,
         )
     except BaseException as exc:
         raise HTTPException(
@@ -148,29 +107,16 @@ def get_timeseries(series: TimeSeriesModel):
 
 @app.post(
     '/get_frame_id',
-    description='Returns a json zarr store bytes',
+    description='Returns the frame ids for a given aoi',
 )
 def get_frame_ids(wkt_event: WKTModel):
-    frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
-    wkt = wkt_event.wkt
-    geometry = shapely_wkt.loads(wkt)
-    gdf = gpd.read_file(frame_path, engine='pyogrio')
-    result = gdf[gdf.intersects(geometry)]
-    frame_ids = set(result['frame_id'])
+    return JSONResponse(
+        {'frame_ids': sorted(_get_frames_for_wkt(WKTModel.wkt)), 'wkt': wkt_event.wkt},
+        headers=DEFAULT_HEADERS,
+    )
 
-    if len(frame_ids) == 0:
-        raise HTTPException(
-            status_code=400,
-            detail=f'No OPERA-S1 burst frame ids were found over the given aoi: {wkt}',
-        )
 
-    return JSONResponse({'frame_ids': sorted(list(frame_ids)), 'wkt': wkt}, headers=DEFAULT_HEADERS)
-
-@app.post(
-        '/validate_aoi',
-        description='Checks that the provided wkt AOI and polarization is valid and that the corresponding zarr stores exist for it'
-)
-def validate_aoi(params: ValidateWKTModel):
+def _get_available_file_stores_for_wkt(params: TimeSeriesModel):
     zarr_stores = [
         f's3://{params.bucket}/OPERA_L3_DISP-S1_IW_F{frame_id}_{params.polarization.value}.json.zarr.gz'
         for frame_id in _get_frames_for_wkt(params.wkt)
@@ -178,11 +124,14 @@ def validate_aoi(params: ValidateWKTModel):
 
     s3 = s3fs.S3FileSystem(anon=False)
     available_zarr_stores = [zarr_store for zarr_store in zarr_stores if s3.exists(zarr_store)]
-    
+
     if len(available_zarr_stores) == 0:
-        raise MissingFrameException(400, f"No data found for the given area of interest {params.wkt}")
-    
-    return JSONResponse({'data_exists': True}, 200)
+        raise MissingFrameException(
+            400, f'No data found for the given area of interest {params.wkt}'
+        )
+
+    return available_zarr_stores
+
 
 def _get_frames_for_wkt(wkt: str) -> list[str]:
     frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
@@ -199,4 +148,3 @@ def _get_frames_for_wkt(wkt: str) -> list[str]:
 
     return sorted(list(frame_ids))
     # return JSONResponse({'frame_ids': sorted(list(frame_ids)), 'wkt': wkt}, headers=DEFAULT_HEADERS)
-

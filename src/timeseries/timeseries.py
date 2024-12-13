@@ -6,17 +6,14 @@ from shapely import LineString, Point, Polygon
 from src.HDF.data_reader import open_zarr_store, get_crs
 from pyproj import CRS, Transformer
 import xarray as xr
-from src.models import FsspecParams
+from src.constants import fsspec_params
 from shapely.ops import transform as shapely_transform
 from shapely.geometry.base import BaseGeometry
 import geopandas as gpd
 
-layer_types = [
-    'short_wavelength_displacement'
-]
+layer_types = ['short_wavelength_displacement']
 
 _data_variables = [
-    # FIXME uncomment when no longer using old staged data 
     *layer_types,
     'netcdf_uri',
     'bytes',
@@ -29,7 +26,6 @@ _data_variables = [
 def get_timeseries_over_aoi(
     geometry: BaseGeometry,
     file_store: str,
-    fsspec_params: FsspecParams,
 ) -> str:
     fs = fsspec.filesystem(
         'reference',
@@ -40,12 +36,10 @@ def get_timeseries_over_aoi(
             'anon': False,
             'default_fill_cache': False,
             'skip_instance_cache': False,
-            **fsspec_params.model_dump(),
+            **fsspec_params,
         },
     )
-    values = open_zarr_store(
-        file_system=fs
-    )
+    values = open_zarr_store(file_system=fs)
 
     _calc_temporal_offsets(values)
 
@@ -65,7 +59,11 @@ def _read_layers_at_pixel(dataset: xr.Dataset, lat: float, lon: float) -> xr.Dat
     xx_index = np.abs(dataset.x.data - xx).argmin()
     yy_index = np.abs(dataset.y.data - yy).argmin()
     # FIXME remove when no longer using old staged data
-    important_variable = 'unwrapped_phase' if 'unwrapped_phase' in list(dataset.data_vars) else 'short_wavelength_displacement'
+    important_variable = (
+        'unwrapped_phase'
+        if 'unwrapped_phase' in list(dataset.data_vars)
+        else 'short_wavelength_displacement'
+    )
     data_variables = [important_variable] + _data_variables
     return dataset[data_variables].isel(x=xx_index, y=yy_index)
 
@@ -86,14 +84,14 @@ def _read_layers_with_aoi(dataset: xr.Dataset, geometry: BaseGeometry):
     d = {'col1': ['aoi'], 'geometry': [projected]}
     gdf = gpd.GeoDataFrame(d, crs=str(epsg))  # type: ignore
 
-    # clip_box limits the clipped geometry to the aoi bounds, 
+    # clip_box limits the clipped geometry to the aoi bounds,
     # otherwise rioxarray will load THE ENTIRE DATASET FOOTPRINT into memory.
     # Not a perfect solution, as any shape that isn't perfectly aligned with
     # bounding dimensions will lead to more remote reads than necessary
-    # ex: the trianges between a bounding box and a rotated square will be 
+    # ex: the trianges between a bounding box and a rotated square will be
     # loaded by `clip()`
 
-    # TODO: Explore opening only one frame, clipping it, then use those 
+    # TODO: Explore opening only one frame, clipping it, then use those
     # indexes to read the remaining timesteps without loading the extra data
     # (assuming all data in uniformly alligned over a frame id, which should be the case)
     clipped_box = dataset.rio.clip_box(*projected.bounds)
