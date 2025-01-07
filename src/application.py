@@ -117,8 +117,12 @@ def get_frame_ids(wkt_event: WKTModel):
 
 
 def _get_available_file_stores_for_wkt(params: TimeSeriesModel):
+    # example:
+    # s3://asf-cumulus-test-opera-products/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F44328_VV_V1/OPERA_L3_DISP-S1_IW_F44328_VV_short_wavelength_displacement.zarr.json.gz
+    
     zarr_stores = [
-        f's3://{params.bucket}/OPERA_L3_DISP-S1_IW_F{frame_id}_{params.polarization.value}.json.zarr.gz'
+        # f's3://{params.bucket}/OPERA_L3_DISP-S1_IW_F{frame_id}_{params.polarization.value}.json.zarr.gz'
+        f's3://{params.bucket}/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{params.polarization.value}_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{params.polarization.value}_short_wavelength_displacement.zarr.json.gz'
         for frame_id in _get_frames_for_wkt(params.wkt)
     ]
 
