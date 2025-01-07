@@ -7,6 +7,7 @@ from aws_cdk import (
     aws_lambda as _lambda,
     aws_logs as logs,
     aws_ec2 as ec2,
+    aws_iam as iam
 )
 from constructs import Construct
 
@@ -73,6 +74,15 @@ class CdkOperaDispStack(Stack):
             # architecture=_lambda.Architecture.ARM_64,
             **lambda_vpc_kwargs
         )
+
+        self.opera_timeseries_function.role.add_to_policy(iam.PolicyStatement(
+            effect='Allow',
+            actions=['s3:GetObject', 's3:ListBucket'],
+            resources=[
+                'arn:aws:s3:::asf-cumulus-test-opera-products/*',
+                'arn:aws:s3:::asf-cumulus-test-opera-products/'
+            ]
+        ))
 
         apigateway.LambdaRestApi(
             self,
