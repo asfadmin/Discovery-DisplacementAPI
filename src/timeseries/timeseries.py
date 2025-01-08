@@ -1,5 +1,4 @@
 # import rasterio
-from typing import Tuple
 import fsspec
 import numpy as np
 from shapely import LineString, Point, Polygon
@@ -112,7 +111,7 @@ def _transform_geometry(geometry: BaseGeometry, source_proj='4326', target_proj=
     return shapely_transform(project, geometry)
 
 
-def _calc_temporal_offsets(data: xr.Dataset) -> Tuple[xr.DataArray, xr.DataArray]:
+def _calc_temporal_offsets(data: xr.Dataset):
     """Returns reference times and calculated temporal offset based off earliest reference_datetime value"""
     secondary_datetimes = data['secondary_datetime']
     reference_datetimes = data['reference_datetime']
