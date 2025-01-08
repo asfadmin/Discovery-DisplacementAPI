@@ -75,8 +75,7 @@ class CdkOperaDispStack(Stack):
             **lambda_vpc_kwargs
         )
 
-        self.opera_timeseries_function.role.add_to_policy(iam.PolicyStatement(
-            effect='Allow',
+        self.opera_timeseries_function.add_to_role_policy(iam.PolicyStatement(
             actions=['s3:GetObject', 's3:ListBucket'],
             resources=[
                 'arn:aws:s3:::asf-cumulus-test-opera-products/*',
