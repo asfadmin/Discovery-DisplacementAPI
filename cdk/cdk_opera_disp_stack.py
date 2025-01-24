@@ -69,7 +69,7 @@ class CdkOperaDispStack(Stack):
                 # platform=Platform.LINUX_ARM64,
             ),
             function_name='DispServiceDockerAPIFunction',
-            timeout=Duration.seconds(30),
+            timeout=Duration.seconds(60),
             memory_size=10240,
             # architecture=_lambda.Architecture.ARM_64,
             **lambda_vpc_kwargs
