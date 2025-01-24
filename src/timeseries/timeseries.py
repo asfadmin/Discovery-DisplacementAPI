@@ -9,7 +9,8 @@ from src.constants import fsspec_params
 from shapely.ops import transform as shapely_transform
 from shapely.geometry.base import BaseGeometry
 import geopandas as gpd
-
+from src import api_logger
+from time import perf_counter
 layer_types = ['short_wavelength_displacement']
 
 _data_variables = [
@@ -26,6 +27,8 @@ def get_timeseries_over_aoi(
     geometry: BaseGeometry,
     file_store: str,
 ) -> str:
+    api_logger.info('Setting up s3fs session')
+    start = perf_counter()
     fs = fsspec.filesystem(
         'reference',
         fo=file_store,
@@ -38,6 +41,7 @@ def get_timeseries_over_aoi(
             **fsspec_params,
         },
     )
+    api_logger.info(f's3fs session setup complete: {perf_counter() - start}s')
     values = open_zarr_store(file_system=fs)
 
     _calc_temporal_offsets(values)

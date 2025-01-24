@@ -13,6 +13,7 @@ from src.models import (
     WKTModel,
 )
 from src.timeseries import get_timeseries_over_aoi
+from src import api_logger
 import s3fs
 import geopandas as gpd
 
@@ -52,12 +53,12 @@ def get_timeseries(series: TimeSeriesModel):
             400, detail=f'Failed to load provided wkt string. Original Error: {exc}'
         )
 
-    logging.debug(f'wkt loaded: {geometry.wkt}')
+    api_logger.debug(f'wkt loaded: {geometry.wkt}')
 
     zarr_stores = _get_available_file_stores_for_wkt(series)
 
     file_store = zarr_stores[0]
-    logging.info(f'using file store: {file_store}')
+    api_logger.info(f'using file store: {file_store}')
 
     try:
         output_str = get_timeseries_over_aoi(
