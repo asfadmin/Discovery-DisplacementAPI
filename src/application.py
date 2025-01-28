@@ -127,5 +127,16 @@ def _get_frames_for_wkt(wkt: str, flight_direction: str) -> list[str]:
             detail=f'No OPERA-S1 burst frame ids were found over the given aoi: {wkt}',
         )
 
-    return sorted(list(frame_ids))
+    frame_strings = []
+    
+    for frame in frame_ids:
+        frame_str = str(frame)
+
+        # append leading zeros
+        if len(frame_str) < 5:
+            frame_str = ('0'*(5-len(frame_str))) + frame_str
+
+        frame_strings.append(str(frame))
+    
+    return sorted(frame_strings)
     # return JSONResponse({'frame_ids': sorted(list(frame_ids)), 'wkt': wkt}, headers=DEFAULT_HEADERS)
