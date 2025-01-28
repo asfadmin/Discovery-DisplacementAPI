@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from src.exceptions import MissingFrameException
 from src.models import (
     TimeSeriesModel,
-    WKTModel,
+    GetFramesModel,
 )
 from src.timeseries import get_timeseries_over_aoi
 from src import api_logger
@@ -77,9 +77,9 @@ def get_timeseries(series: TimeSeriesModel):
     '/get_frame_id',
     description='Returns the frame ids for a given aoi',
 )
-def get_frame_ids(wkt_event: WKTModel):
+def get_frame_ids(wkt_event: GetFramesModel):
     return JSONResponse(
-        {'frame_ids': sorted(_get_frames_for_wkt(wkt_event.wkt)), 'wkt': wkt_event.wkt},
+        {'frame_ids': sorted(_get_frames_for_wkt(wkt_event.wkt, wkt_event.flightDirection)), 'wkt': wkt_event.wkt},
         headers=DEFAULT_HEADERS,
     )
 
@@ -91,9 +91,9 @@ def _get_available_file_stores_for_wkt(params: TimeSeriesModel):
     polarization = params.polarization.value
 
     zarr_stores = [
-        # f's3://{params.bucket}/OPERA_L3_DISP-S1_IW_F{frame_id}_{params.polarization.value}.json.zarr.gz'
-        f's3://{params.bucket}/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_short_wavelength_displacement.zarr.json.gz'
-        for frame_id in _get_frames_for_wkt(params.wkt)
+        f's3://{params.bucket}/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}.json.zarr.gz'
+        # f's3://{params.bucket}/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_short_wavelength_displacement.zarr.json.gz'
+        for frame_id in _get_frames_for_wkt(params.wkt, params.flightDirection)
     ]
 
     s3 = s3fs.S3FileSystem(anon=False)
@@ -114,11 +114,11 @@ def _get_available_file_stores_for_wkt(params: TimeSeriesModel):
     return available_zarr_stores
 
 
-def _get_frames_for_wkt(wkt: str) -> list[str]:
+def _get_frames_for_wkt(wkt: str, flight_direction: str) -> list[str]:
     frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
     geometry = shapely_wkt.loads(wkt)
     gdf = gpd.read_file(frame_path, engine='pyogrio')
-    result = gdf[gdf.intersects(geometry)]
+    result = gdf[gdf.orbit_direction==flight_direction][gdf.intersects(geometry)]
     frame_ids = set(result['frame_id'])
 
     if len(frame_ids) == 0:
