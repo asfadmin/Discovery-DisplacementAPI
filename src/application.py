@@ -91,8 +91,8 @@ def _get_available_file_stores_for_wkt(params: TimeSeriesModel):
     polarization = params.polarization.value
 
     zarr_stores = [
-        f's3://{params.bucket}/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}.json.zarr.gz'
-        # f's3://{params.bucket}/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_short_wavelength_displacement.zarr.json.gz'
+        # f's3://{params.bucket}/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}.json.zarr.gz'
+        f's3://{params.bucket}/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_short_wavelength_displacement.zarr.json.gz'
         for frame_id in _get_frames_for_wkt(params.wkt, params.flightDirection)
     ]
 
