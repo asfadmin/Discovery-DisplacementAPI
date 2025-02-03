@@ -27,7 +27,6 @@ def get_timeseries_over_aoi(
     geometry: BaseGeometry,
     file_store: str,
 ) -> str:
-    api_logger.info('Setting up s3fs session')
     start = perf_counter()
     fs = fsspec.filesystem(
         'reference',
@@ -41,15 +40,22 @@ def get_timeseries_over_aoi(
             **fsspec_params,
         },
     )
-    api_logger.info(f's3fs session setup complete: {perf_counter() - start}s')
+    api_logger.info(f's3fs filesystem creation: {perf_counter() - start} seconds')
+    
+    start = perf_counter()
     values = open_zarr_store(file_system=fs)
+    api_logger.info(f'Remote dataset opened: {perf_counter() - start} seconds')
 
+    start = perf_counter()
     _calc_temporal_offsets(values)
+    api_logger.info(f'Temporal Offset calc: {perf_counter() - start} seconds')
 
+    start = perf_counter()
     if isinstance(geometry, Point):
         values = _read_layers_at_pixel(values, lon=geometry.x, lat=geometry.y)
     elif isinstance(geometry, Polygon) or isinstance(geometry, LineString):
         values = _read_layers_with_aoi(values, geometry)
+    api_logger.info(f'AOI Read Speed: {perf_counter() - start} seconds')
     return _pandas_output(values)
 
 
@@ -129,10 +135,14 @@ def _calc_temporal_offsets(data: xr.Dataset):
 
 
 def _pandas_output(data: xr.Dataset):
+
+    start = perf_counter()
     data = data.sortby('secondary_datetime')
     pandas_values = data.to_pandas()
 
     # sort by time, make fileName column the index for our data for nicer json output
     pandas_values = pandas_values.reset_index().set_index('source_file_name')
     pandas_values.loc['mean'] = pandas_values.mean(skipna=True, numeric_only=True)
-    return pandas_values.to_json(date_format='iso', orient='index')
+    out = pandas_values.to_json(date_format='iso', orient='index')
+    api_logger.info(f'Pandas conversion: {perf_counter() - start} seconds')
+    return out

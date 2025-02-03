@@ -1,6 +1,6 @@
 from fastapi import APIRouter, FastAPI, HTTPException, Response
 from pathlib import Path
-
+from time import perf_counter
 import logging
 
 from fastapi.responses import JSONResponse
@@ -46,6 +46,7 @@ class ReadLayer(BaseModel):
     description='Returns a json response with values read at "unwrapped_phase", "interferometric_correlation", and "temporal_coherence" layers in provided files at given point',
 )
 def get_timeseries(series: TimeSeriesModel):
+    start = perf_counter()
     try:
         geometry = shapely_wkt.loads(series.wkt)
     except BaseException as exc:
@@ -70,6 +71,7 @@ def get_timeseries(series: TimeSeriesModel):
             500, detail=f'Failed to calculate timeseries. Original Exception: {exc}'
         )
 
+    api_logger.info(f'Query time: {perf_counter() - start} seconds')
     return Response(content=output_str, media_type='application/json', headers=DEFAULT_HEADERS)
 
 
