@@ -10,8 +10,10 @@ from time import perf_counter
 def open_zarr_store(file_system: S3FileSystem, group='/') -> xr.Dataset:
     # Implements example from Luis López using fsspec_params and driver_config for kerchunked zarr store
     # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
+
+    m = file_system.get_mapper('')
     return xr.open_dataset(
-        file_system.get_mapper(''),  # type: ignore
+        m,  # type: ignore
         engine='zarr',
         backend_kwargs={'consolidated': False, 'group': group},
     )
