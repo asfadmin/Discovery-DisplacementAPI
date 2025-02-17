@@ -160,7 +160,7 @@ def _fix_rolling_reference(data: pandas.DataFrame) -> pandas.DataFrame:
     for _, scene in data.iterrows():
         # apply last scene with previous reference date as offset
         if not _within_one_day(scene.reference_datetime, prev_granule.reference_datetime):
-            correction = prev_granule.short_wavelength_displacement
+            correction += prev_granule.short_wavelength_displacement
 
         data.loc[scene.name, 'short_wavelength_displacement'] += correction
         prev_granule = scene
