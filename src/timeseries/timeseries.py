@@ -1,5 +1,7 @@
 # import rasterio
+from datetime import datetime, timedelta
 import fsspec
+import fsspec.config
 import numpy as np
 from shapely import LineString, Point, Polygon
 from src.HDF.data_reader import open_zarr_store, get_crs
@@ -9,8 +11,10 @@ from src.constants import fsspec_params
 from shapely.ops import transform as shapely_transform
 from shapely.geometry.base import BaseGeometry
 import geopandas as gpd
+import pandas
 from src import api_logger
 from time import perf_counter
+
 layer_types = ['short_wavelength_displacement']
 
 _data_variables = [
@@ -41,11 +45,12 @@ def get_timeseries_over_aoi(
         },
     )
     api_logger.info(f's3fs filesystem creation: {perf_counter() - start} seconds')
-    
+
     start = perf_counter()
     values = open_zarr_store(file_system=fs)
     api_logger.info(f'Remote dataset opened: {perf_counter() - start} seconds')
 
+    # values = _drop_min_version(values)
     start = perf_counter()
     _calc_temporal_offsets(values)
     api_logger.info(f'Temporal Offset calc: {perf_counter() - start} seconds')
@@ -56,6 +61,8 @@ def get_timeseries_over_aoi(
     elif isinstance(geometry, Polygon) or isinstance(geometry, LineString):
         values = _read_layers_with_aoi(values, geometry)
     api_logger.info(f'AOI Read Speed: {perf_counter() - start} seconds')
+    # [(short_wavelength_displacement, reference_date, )]
+    # values = _fix_rolling_reference(values)
     return _pandas_output(values)
 
 
@@ -121,6 +128,10 @@ def _transform_geometry(geometry: BaseGeometry, source_proj='4326', target_proj=
     return shapely_transform(project, geometry)
 
 
+# def _drop_min_version(data: xr.Dataset):
+#     return data.where(lambda scene: float(scene.product_version[1:]) >= 0.9)
+
+
 def _calc_temporal_offsets(data: xr.Dataset):
     """Returns reference times and calculated temporal offset based off earliest reference_datetime value"""
     secondary_datetimes = data['secondary_datetime']
@@ -131,15 +142,45 @@ def _calc_temporal_offsets(data: xr.Dataset):
         .astype('timedelta64[s]')
         .dt.days
     )
-    # return reference_datetimes, temporal_baselines
+
+
+def _within_one_day(date1: datetime, date2: datetime) -> bool:
+    return abs(date1 - date2) <= timedelta(days=1)
+
+
+def _fix_rolling_reference(data: pandas.DataFrame) -> pandas.DataFrame:
+    # doing this in xarray was REALLY slow (possibly do to dask eval on each individual timestep, ~0.2-0.4s each)
+    # performing fix with pandas dataframe significantly more performant
+
+    # grab the first scene, use to offset first timestep to 0
+    prev_granule = data.iloc[0]
+    correction = -prev_granule.short_wavelength_displacement
+
+    start = perf_counter()
+    for _, scene in data.iterrows():
+        # apply last scene with previous reference date as offset
+        if not _within_one_day(scene.reference_datetime, prev_granule.reference_datetime):
+            correction += prev_granule.short_wavelength_displacement
+
+        data.loc[scene.name, 'short_wavelength_displacement'] += correction
+        prev_granule = scene
+
+    # update reference dates
+    for _, scene in data.iterrows():
+        data.loc[scene.name, 'reference_datetime'] = data.iloc[0].reference_datetime
+
+    api_logger.info(
+        f'Rolling reference correction for {len(data)}: {perf_counter() - start} seconds'
+    )
+
+    return data
 
 
 def _pandas_output(data: xr.Dataset):
-
     start = perf_counter()
     data = data.sortby('secondary_datetime')
-    pandas_values = data.to_pandas()
-
+    pandas_values = data.to_dataframe()
+    pandas_values = _fix_rolling_reference(pandas_values)
     # sort by time, make fileName column the index for our data for nicer json output
     pandas_values = pandas_values.reset_index().set_index('source_file_name')
     pandas_values.loc['mean'] = pandas_values.mean(skipna=True, numeric_only=True)
