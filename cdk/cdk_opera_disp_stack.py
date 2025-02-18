@@ -1,13 +1,18 @@
 import json
 
 from aws_cdk import (
+    CfnOutput,
     Duration,
     Stack,
     aws_apigateway as apigateway,
     aws_lambda as _lambda,
     aws_logs as logs,
     aws_ec2 as ec2,
-    aws_iam as iam
+    aws_iam as iam,
+    aws_efs as efs,
+    aws_ecs as ecs,
+    aws_ecs_patterns as ecs_patterns,
+    aws_ecr_assets as ecr_assets, 
 )
 from constructs import Construct
 
@@ -53,6 +58,12 @@ class CdkOperaDispStack(Stack):
                 'security_groups': [security_group],
             }
 
+            ecs_vpc_kwargs = {
+                'vpc': vpc,
+                'task_subnets': subnet_selection,
+                'security_groups': [security_group],
+            }
+
             apigateway_kwargs = {
                 'endpoint_configuration': apigateway.EndpointConfiguration(
                     # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
@@ -74,44 +85,94 @@ class CdkOperaDispStack(Stack):
             # architecture=_lambda.Architecture.ARM_64,
             **lambda_vpc_kwargs
         )
-
-        self.opera_timeseries_function.add_to_role_policy(iam.PolicyStatement(
-            actions=['s3:GetObject', 's3:ListBucket'],
-            resources=[
-                'arn:aws:s3:::asf-cumulus-test-opera-products/*',
-                'arn:aws:s3:::asf-cumulus-test-opera-products/'
-            ]
-        ))
-
-        apigateway.LambdaRestApi(
-            self,
-            'DispServiceApi',
-            handler=self.opera_timeseries_function,
-            proxy=True,
-            default_cors_preflight_options=apigateway.CorsOptions(
-                allow_origins=apigateway.Cors.ALL_ORIGINS,
-                allow_methods=apigateway.Cors.ALL_METHODS
-            ),
-            deploy_options=apigateway.StageOptions(
-                access_log_destination=apigateway.LogGroupLogDestination(
-                    logs.LogGroup(
-                        self,
-                        'DispServiceApiLogGroup',
-                        retention=logs.RetentionDays.THREE_MONTHS,
-                    )
-                ),
-                access_log_format=apigateway.AccessLogFormat.custom(json.dumps({
-                    'sourceIp': '$context.identity.sourceIp',
-                    'httpMethod': '$context.httpMethod',
-                    'path': '$context.path',
-                    'status': '$context.status',
-                    'responseLength': '$context.responseLength',
-                    'responseLatency': '$context.responseLatency',
-                    'requestTime': '$context.requestTime',
-                    'protocol': '$context.protocol',
-                    'userAgent': '$context.identity.userAgent',
-                    'requestId': '$context.requestId',
-                })),
-            ),
-            **apigateway_kwargs
+        dockerImageAsset = ecr_assets.DockerImageAsset(self, "DispServiceDockerImage",
+            directory=dockerfileDir,
+            invalidation=ecr_assets.DockerImageAssetInvalidationOptions(
+                build_args=False
+            )
         )
+        self.fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
+            self,
+            'DispServiceWebServer',
+            memory_limit_mib=16384,
+            cpu=2048,
+            task_image_options=ecs_patterns.ApplicationLoadBalancedTaskImageOptions(
+                image=ecs.ContainerImage.from_docker_image_asset(dockerImageAsset),
+                container_port=8080,
+            ),
+            # public_load_balancer=False,
+            **ecs_vpc_kwargs
+        )
+        self.fargate_service.task_definition.add_to_task_role_policy(
+            iam.PolicyStatement(
+                        actions=['s3:GetObject', 's3:ListBucket'],
+                        resources=[
+                            'arn:aws:s3:::asf-cumulus-test-opera-products/*',
+                            'arn:aws:s3:::asf-cumulus-test-opera-products/'
+                        ]
+                    )
+        )
+
+        
+
+
+        # self.opera_timeseries_fargate = ecs.FargateService(
+        #     self,
+        #     'DispServiceDockerFargate',
+        # )
+
+        # self.opera_timeseries_function.add_to_role_policy(iam.PolicyStatement(
+        #     actions=['s3:GetObject', 's3:ListBucket'],
+        #     resources=[
+        #         'arn:aws:s3:::asf-cumulus-test-opera-products/*',
+        #         'arn:aws:s3:::asf-cumulus-test-opera-products/'
+        #     ]
+        # ))
+
+        # file_system = efs.FileSystem(self, "MyEfsFileSystem",
+        #     vpc=vpc,
+        #     lifecycle_policy=efs.LifecyclePolicy.AFTER_1_DAY,  # files are not transitioned to infrequent access (IA) storage by default
+        #     performance_mode=efs.PerformanceMode.GENERAL_PURPOSE,  # default
+        #     out_of_infrequent_access_policy=efs.OutOfInfrequentAccessPolicy.AFTER_1_ACCESS,  # files are not transitioned back from (infrequent access) IA to primary storage by default
+        #     transition_to_archive_policy=efs.LifecyclePolicy.AFTER_7_DAYS,  # files are not transitioned to Archive by default
+        #     replication_overwrite_protection=efs.ReplicationOverwriteProtection.ENABLED,
+        #     throughput_mode=efs.ThroughputMode.BURSTING,
+        #     one_zone=True,
+        #     # vpc_subnets=ec2.SubnetSelection(
+        #     # availability_zones=["us-west-1b"]
+        #     # )
+        # )
+
+
+        # apigateway.LambdaRestApi(
+        #     self,
+        #     'DispServiceApi',
+        #     handler=self.opera_timeseries_function,
+        #     proxy=True,
+        #     default_cors_preflight_options=apigateway.CorsOptions(
+        #         allow_origins=apigateway.Cors.ALL_ORIGINS,
+        #         allow_methods=apigateway.Cors.ALL_METHODS
+        #     ),
+        #     deploy_options=apigateway.StageOptions(
+        #         access_log_destination=apigateway.LogGroupLogDestination(
+        #             logs.LogGroup(
+        #                 self,
+        #                 'DispServiceApiLogGroup',
+        #                 retention=logs.RetentionDays.THREE_MONTHS,
+        #             )
+        #         ),
+        #         access_log_format=apigateway.AccessLogFormat.custom(json.dumps({
+        #             'sourceIp': '$context.identity.sourceIp',
+        #             'httpMethod': '$context.httpMethod',
+        #             'path': '$context.path',
+        #             'status': '$context.status',
+        #             'responseLength': '$context.responseLength',
+        #             'responseLatency': '$context.responseLatency',
+        #             'requestTime': '$context.requestTime',
+        #             'protocol': '$context.protocol',
+        #             'userAgent': '$context.identity.userAgent',
+        #             'requestId': '$context.requestId',
+        #         })),
+        #     ),
+        #     **apigateway_kwargs
+        # )

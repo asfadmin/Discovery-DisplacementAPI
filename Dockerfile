@@ -1,5 +1,5 @@
 FROM public.ecr.aws/docker/library/python:3.12
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.3 /lambda-adapter /opt/extensions/lambda-adapter
+# COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.3 /lambda-adapter /opt/extensions/lambda-adapter
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 ARG HOST=127.0.0.1
