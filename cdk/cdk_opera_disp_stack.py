@@ -165,7 +165,8 @@ class CdkOperaDispStack(Stack):
                 image=ecs.ContainerImage.from_docker_image_asset(dockerImageAsset),
                 container_port=8080,
             ),
-            public_load_balancer=True,
+            listener_port=8080,
+            # public_load_balancer=True,
             **ecs_vpc_kwargs
         )
         # self.fargate_service.service
