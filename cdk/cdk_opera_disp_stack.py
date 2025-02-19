@@ -128,7 +128,7 @@ class CdkOperaDispStack(Stack):
                         'DispServiceApiLogGroup',
                         retention=logs.RetentionDays.THREE_MONTHS,
                     )
-                ), # type: ignore
+                ),
                 access_log_format=apigateway.AccessLogFormat.custom(json.dumps({
                     'sourceIp': '$context.identity.sourceIp',
                     'httpMethod': '$context.httpMethod',
