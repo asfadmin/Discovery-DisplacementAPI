@@ -166,7 +166,7 @@ class CdkOperaDispStack(Stack):
                 container_port=8080,
             ),
             listener_port=8080,
-            # public_load_balancer=True,
+            public_load_balancer=False,
             **ecs_vpc_kwargs
         )
         # self.fargate_service.service
