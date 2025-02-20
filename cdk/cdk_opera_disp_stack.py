@@ -203,7 +203,7 @@ class CdkOperaDispStack(Stack):
         )
         fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self, "OperaDispFargateService", cluster=cluster, task_definition=task_definition,
-            task_subnets= ecs_vpc_kwargs['vpc_subnets'],
+            task_subnets= ecs_vpc_kwargs['task_subnets'],
             security_groups= ecs_vpc_kwargs['security_groups'],
             memory_limit_mib=16384,
             cpu=2048,
