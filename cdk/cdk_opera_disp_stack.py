@@ -189,7 +189,7 @@ class CdkOperaDispStack(Stack):
         task_definition = ecs.FargateTaskDefinition(
             scope=self, id="OperaDispFargateECSTask",
         )
-        port_mapping = ecs.PortMapping(container_port=8080, host_port=0)
+        port_mapping = ecs.PortMapping(container_port=8080)
         task_definition.add_container(
             id="OperaDispFargateContainer", image=ecs.ContainerImage.from_docker_image_asset(dockerImageAsset)
         ).add_port_mappings(port_mapping)
