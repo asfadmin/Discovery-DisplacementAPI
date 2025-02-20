@@ -12,11 +12,8 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_ecr_assets as ecr_assets,
-    CfnOutput
-    
+    CfnOutput,
 )
-from aws_cdk import Duration
-from aws_cdk.aws_events import HttpMethod
 from constructs import Construct
 
 
@@ -183,8 +180,12 @@ class CdkOperaDispStack(Stack):
         #             )
         # )
 
-        cluster = ecs.Cluster(self, "OperaDispFargateCluster", vpc=ecs_vpc_kwargs['vpc'])
-        
+        # cluster = ecs.Cluster(self, "OperaDispFargateCluster", vpc=ecs_vpc_kwargs['vpc'])
+        # cluster.add_capacity(
+        #     "DefaultAutoScalingGroupCapacity",
+        #     instance_type=ec2.InstanceType("t2.xlarge"),
+        #     desired_capacity=1
+        # )
         task_definition = ecs.FargateTaskDefinition(
             scope=self, id="OperaDispFargateECSTask",
         )
@@ -202,12 +203,18 @@ class CdkOperaDispStack(Stack):
                     )
         )
         fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
-            self, "OperaDispFargateService", cluster=cluster, task_definition=task_definition,
+            self, 
+            "OperaDispFargateService", 
+            # cluster=cluster,
+            task_definition=task_definition,
             task_subnets= ecs_vpc_kwargs['task_subnets'],
             security_groups= ecs_vpc_kwargs['security_groups'],
             memory_limit_mib=16384,
             cpu=2048,
             desired_count=1,
+            max_healthy_percent=100,
+            min_healthy_percent=0,
+            vpc=ecs_vpc_kwargs['vpc'],
         )
 
         CfnOutput(
