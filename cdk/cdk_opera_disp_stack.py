@@ -201,7 +201,7 @@ class CdkOperaDispStack(Stack):
                         ]
                     )
         )
-        fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
+        fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
             self, "OperaDispFargateService", cluster=cluster, task_definition=task_definition,
             task_subnets= ecs_vpc_kwargs['task_subnets'],
             security_groups= ecs_vpc_kwargs['security_groups'],
