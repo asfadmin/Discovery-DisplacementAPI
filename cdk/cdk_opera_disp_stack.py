@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_ecr_assets as ecr_assets,
+    CfnOutput
     
 )
 from aws_cdk import Duration
@@ -157,22 +158,41 @@ class CdkOperaDispStack(Stack):
             )
         )
 
-        self.fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
-            self,
-            'DispServiceFargateWebServer',
-            memory_limit_mib=16384,
-            cpu=2048,
-            task_image_options=ecs_patterns.NetworkLoadBalancedTaskImageOptions(
-                image=ecs.ContainerImage.from_docker_image_asset(dockerImageAsset),
-                # container_port=8080,
-            ),
-            # listener_port=8080,
-            public_load_balancer=False,
-            health_check_grace_period=Duration.minutes(2),
-            **ecs_vpc_kwargs
+        # self.fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
+        #     self,
+        #     'DispServiceFargateWebServer',
+        #     memory_limit_mib=16384,
+        #     cpu=2048,
+        #     task_image_options=ecs_patterns.NetworkLoadBalancedTaskImageOptions(
+        #         image=ecs.ContainerImage.from_docker_image_asset(dockerImageAsset),
+        #         # container_port=8080,
+        #     ),
+        #     # listener_port=8080,
+        #     public_load_balancer=False,
+        #     health_check_grace_period=Duration.minutes(2),
+        #     **ecs_vpc_kwargs
+        # )
+        # # self.fargate_service.service
+        # self.fargate_service.task_definition.add_to_task_role_policy(
+        #     iam.PolicyStatement(
+        #                 actions=['s3:GetObject', 's3:ListBucket'],
+        #                 resources=[
+        #                     'arn:aws:s3:::asf-cumulus-test-opera-products/*',
+        #                     'arn:aws:s3:::asf-cumulus-test-opera-products/'
+        #                 ]
+        #             )
+        # )
+
+        cluster = ecs.Cluster(self, "OperaDispFargateCluster", vpc=ecs_vpc_kwargs['vpc'])
+        
+        task_definition = ecs.FargateTaskDefinition(
+            scope=self, id="OperaDispFargateECSTask",
         )
-        # self.fargate_service.service
-        self.fargate_service.task_definition.add_to_task_role_policy(
+        port_mapping = ecs.PortMapping(container_port=8080, host_port=8080)
+        task_definition.add_container(
+            id="OperaDispFargateContainer", image=ecs.ContainerImage.from_docker_image_asset(dockerImageAsset)
+        ).add_port_mappings(port_mapping)
+        task_definition.add_to_task_role_policy(
             iam.PolicyStatement(
                         actions=['s3:GetObject', 's3:ListBucket'],
                         resources=[
@@ -180,6 +200,19 @@ class CdkOperaDispStack(Stack):
                             'arn:aws:s3:::asf-cumulus-test-opera-products/'
                         ]
                     )
+        )
+        fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
+            self, "OperaDispFargateService", cluster=cluster, task_definition=task_definition,
+            task_subnets= ecs_vpc_kwargs['subnet_selection'],
+            security_groups= ecs_vpc_kwargs['security_group'],
+            memory_limit_mib=16384,
+            cpu=2048,
+        )
+
+        CfnOutput(
+            self,
+            "OperaDispFargateLoadBalancerDNS",
+            value=fargate_service.load_balancer.load_balancer_dns_name,
         )
 
         # self.nlb = self.fargate_service.load_balancer
