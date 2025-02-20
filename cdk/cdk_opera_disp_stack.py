@@ -207,6 +207,7 @@ class CdkOperaDispStack(Stack):
             security_groups= ecs_vpc_kwargs['security_groups'],
             memory_limit_mib=16384,
             cpu=2048,
+            desired_count=1,
         )
 
         CfnOutput(
