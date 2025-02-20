@@ -208,6 +208,7 @@ class CdkOperaDispStack(Stack):
             # cluster=cluster,
             task_definition=task_definition,
             task_subnets= ecs_vpc_kwargs['task_subnets'],
+            listener_port=8080,
             security_groups= ecs_vpc_kwargs['security_groups'],
             memory_limit_mib=16384,
             cpu=2048,
