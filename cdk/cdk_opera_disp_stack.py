@@ -14,6 +14,7 @@ from aws_cdk import (
     aws_ecr_assets as ecr_assets,
     
 )
+from aws_cdk import Duration
 from aws_cdk.aws_events import HttpMethod
 from constructs import Construct
 
@@ -163,10 +164,11 @@ class CdkOperaDispStack(Stack):
             cpu=2048,
             task_image_options=ecs_patterns.NetworkLoadBalancedTaskImageOptions(
                 image=ecs.ContainerImage.from_docker_image_asset(dockerImageAsset),
-                container_port=8080,
+                # container_port=8080,
             ),
-            listener_port=8080,
+            # listener_port=8080,
             public_load_balancer=False,
+            health_check_grace_period=Duration.minutes(2),
             **ecs_vpc_kwargs
         )
         # self.fargate_service.service
