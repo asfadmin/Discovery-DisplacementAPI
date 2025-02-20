@@ -189,7 +189,7 @@ class CdkOperaDispStack(Stack):
         task_definition = ecs.FargateTaskDefinition(
             scope=self, id="OperaDispFargateECSTask",
         )
-        port_mapping = ecs.PortMapping(container_port=8080, host_port=8080)
+        port_mapping = ecs.PortMapping(container_port=8080, host_port=0)
         task_definition.add_container(
             id="OperaDispFargateContainer", image=ecs.ContainerImage.from_docker_image_asset(dockerImageAsset)
         ).add_port_mappings(port_mapping)
@@ -208,7 +208,7 @@ class CdkOperaDispStack(Stack):
             # cluster=cluster,
             task_definition=task_definition,
             task_subnets= ecs_vpc_kwargs['task_subnets'],
-            listener_port=8080,
+            # listener_port=8080,
             security_groups= ecs_vpc_kwargs['security_groups'],
             memory_limit_mib=16384,
             cpu=2048,
