@@ -3,7 +3,7 @@ import json
 from aws_cdk import (
     Duration,
     Stack,
-    aws_apigateway as apigateway,
+    aws_apigatewayv2 as apigateway,
     aws_lambda as _lambda,
     aws_logs as logs,
     aws_ec2 as ec2,
@@ -13,6 +13,7 @@ from aws_cdk import (
     aws_ecs_patterns as ecs_patterns,
     aws_ecr_assets as ecr_assets,
     CfnOutput,
+    CfnResource,
 )
 from constructs import Construct
 
@@ -250,78 +251,108 @@ class CdkOperaDispStack(Stack):
         # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
         # AWS cdk docs not comprehensive on this workflow, example taken from here
         # https://github.com/aws/aws-cdk/issues/26612#issuecomment-1664176179
-        self.dispApi = apigateway.RestApi(
+        self.dispApi = apigateway.HttpApi(
             self,
             'DispServiceFargateApi',
-            default_cors_preflight_options=apigateway.CorsOptions(
-                allow_origins=apigateway.Cors.ALL_ORIGINS,
-                allow_methods=apigateway.Cors.ALL_METHODS
+            create_default_stage=True,
+            cors_preflight=apigateway.CorsPreflightOptions(
+                allow_origins=['*'],
+                allow_methods=[apigateway.CorsHttpMethod.POST, apigateway.CorsHttpMethod.GET, apigateway.CorsHttpMethod.HEAD, apigateway.CorsHttpMethod.OPTIONS],
             ),
-            deploy_options=apigateway.StageOptions(
-                access_log_destination=apigateway.LogGroupLogDestination(
-                    logs.LogGroup(
-                        self,
-                        'DispServiceFargateApiLogGroup',
-                        retention=logs.RetentionDays.THREE_MONTHS,
-                    )
-                ), # type: ignore
-                access_log_format=apigateway.AccessLogFormat.custom(json.dumps({
-                    'sourceIp': '$context.identity.sourceIp',
-                    'httpMethod': '$context.httpMethod',
-                    'path': '$context.path',
-                    'status': '$context.status',
-                    'responseLength': '$context.responseLength',
-                    'responseLatency': '$context.responseLatency',
-                    'requestTime': '$context.requestTime',
-                    'protocol': '$context.protocol',
-                    'userAgent': '$context.identity.userAgent',
-                    'requestId': '$context.requestId',
-                })),
-            ),
-            **apigateway_kwargs
+            # deploy_options=apigateway.StageOptions(
+                # access_log_destination=apigateway.LogGroupLogDestination(
+                #     logs.LogGroup(
+                #         self,
+                #         'DispServiceFargateApiLogGroup',
+                #         retention=logs.RetentionDays.THREE_MONTHS,
+                #     )
+                # ), # type: ignore
+            #     access_log_format=apigateway.AccessLogFormat.custom(json.dumps({
+            #         'sourceIp': '$context.identity.sourceIp',
+            #         'httpMethod': '$context.httpMethod',
+            #         'path': '$context.path',
+            #         'status': '$context.status',
+            #         'responseLength': '$context.responseLength',
+            #         'responseLatency': '$context.responseLatency',
+            #         'requestTime': '$context.requestTime',
+            #         'protocol': '$context.protocol',
+            #         'userAgent': '$context.identity.userAgent',
+            #         'requestId': '$context.requestId',
+            #     })),
+            # ),
+            # **apigateway_kwargs
         )
 
-
-        link = apigateway.VpcLink(
+        http_vpc_link = CfnResource(
             self,
-            "DispServiceFargateLink",
-            description="Link between the network load balance for the fargate service",
-            targets=[fargate_service.load_balancer],
-        )
+            'DispAPIHTTPLink',
+            type='AWS::ApiGatewayV2::VpcLink',
+            properties= {
+                'Name': "V2 VPC Link",
+                'SubnetIds': ecs_vpc_kwargs['task_subnets'],
+        })
 
-        self.dispApi.root.add_resource("{proxy+}")
+        # link = apigateway.VpcLink(
+        #     self,
+        #     "DispServiceFargateLink",
+        #     description="Link between the network load balance for the fargate service",
+        #     targets=[fargate_service.load_balancer],
+        # )
+
+        # self.dispApi.root.add_resource("{proxy+}")
         
-        vpc_integration = apigateway.Integration(
-            type=apigateway.IntegrationType.HTTP,
-            integration_http_method='ANY',
-            uri="http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
-            options=apigateway.IntegrationOptions(
-                connection_type=apigateway.ConnectionType.VPC_LINK,
-                request_parameters={
-                    "integration.request.path.proxy": "method.request.path.proxy"
-                },
-                vpc_link=link,
-                integration_responses=[
-                    apigateway.IntegrationResponse(
-                        status_code="200",
-                        response_parameters={
-                            "application/json": ""
-                        }
-                    )
-                ]
-            ),
+        vpc_integration = apigateway.CfnIntegration(
+            self,
+            'DispAPIVPCIntegration',
+            description='DISP API VPC Integration',
+            integration_type="HTTP_PROXY",
+            connection_id=http_vpc_link.ref,
+            connection_type='VPC_LINK',
+            api_id=self.dispApi.http_api_id,
+            integration_method='ANY',
+            payload_format_version='1.0',
+            integration_uri= fargate_service.listener.listener_arn, #"http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
+            # options=apigateway.IntegrationOptions(
+            #     connection_type=apigateway.ConnectionType.VPC_LINK,
+            #     request_parameters={
+            #         "integration.request.path.proxy": "method.request.path.proxy"
+            #     },
+            #     vpc_link=link,
+            #     integration_responses=[
+            #         apigateway.IntegrationResponse(
+            #             status_code="200",
+            #             response_parameters={
+            #                 "application/json": ""
+            #             }
+            #         )
+            #     ]
+            # ),
         )
 
-        self.dispApi.root.add_method(
-            "ANY",
-            vpc_integration,
-            request_parameters={"method.request.path.proxy": True},
-            method_responses=[
-                apigateway.MethodResponse(
-                    status_code="200"
-                )
-            ]
+        apigateway.CfnRoute(
+            self,
+            'DispAPIRoute',
+            api_id=self.dispApi.http_api_id,
+            route_key='ANY /{proxy+}',
+            target=f'integrations/{vpc_integration.ref}'
         )
+
+        CfnOutput(
+            self,
+            'dispAPIUrl',
+            value=self.dispApi.url, # type: ignore
+        )
+
+        # self.dispApi.root.add_method(
+        #     "ANY",
+        #     vpc_integration,
+        #     request_parameters={"method.request.path.proxy": True},
+        #     method_responses=[
+        #         apigateway.MethodResponse(
+        #             status_code="200"
+        #         )
+        #     ]
+        # )
         # effectively do what LambdaRestApi.handler manually
         # default_method_options = apigateway.MethodOptions(
         #     request_parameters={"method.request.path.proxy": True},
