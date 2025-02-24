@@ -3,7 +3,8 @@ import json
 from aws_cdk import (
     Duration,
     Stack,
-    aws_apigatewayv2 as apigateway,
+    aws_apigateway as apigateway,
+    aws_apigatewayv2 as apigatewayV2,
     aws_lambda as _lambda,
     aws_logs as logs,
     aws_ec2 as ec2,
@@ -251,13 +252,13 @@ class CdkOperaDispStack(Stack):
         # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
         # AWS cdk docs not comprehensive on this workflow, example taken from here
         # https://github.com/aws/aws-cdk/issues/26612#issuecomment-1664176179
-        self.dispApi = apigateway.HttpApi(
+        self.dispApi = apigatewayV2.HttpApi(
             self,
             'DispServiceFargateApi',
             create_default_stage=True,
-            cors_preflight=apigateway.CorsPreflightOptions(
+            cors_preflight=apigatewayV2.CorsPreflightOptions(
                 allow_origins=['*'],
-                allow_methods=[apigateway.CorsHttpMethod.POST, apigateway.CorsHttpMethod.GET, apigateway.CorsHttpMethod.HEAD, apigateway.CorsHttpMethod.OPTIONS],
+                allow_methods=[apigatewayV2.CorsHttpMethod.POST, apigatewayV2.CorsHttpMethod.GET, apigatewayV2.CorsHttpMethod.HEAD, apigatewayV2.CorsHttpMethod.OPTIONS],
             ),
             # deploy_options=apigateway.StageOptions(
                 # access_log_destination=apigateway.LogGroupLogDestination(
@@ -301,7 +302,7 @@ class CdkOperaDispStack(Stack):
 
         # self.dispApi.root.add_resource("{proxy+}")
         
-        vpc_integration = apigateway.CfnIntegration(
+        vpc_integration = apigatewayV2.CfnIntegration(
             self,
             'DispAPIVPCIntegration',
             description='DISP API VPC Integration',
@@ -329,7 +330,7 @@ class CdkOperaDispStack(Stack):
             # ),
         )
 
-        apigateway.CfnRoute(
+        apigatewayV2.CfnRoute(
             self,
             'DispAPIRoute',
             api_id=self.dispApi.http_api_id,
