@@ -20,11 +20,9 @@ from constructs import Construct
 
 
 class CdkOperaDispStack(Stack):
-
     def __init__(
         self, scope: Construct, construct_id: str, deployment_environment: str, **kwargs
     ) -> None:
-
         super().__init__(scope, construct_id, **kwargs)
         self.deployment_environment = deployment_environment
 
@@ -41,18 +39,12 @@ class CdkOperaDispStack(Stack):
             apigateway_kwargs = {}
             ecs_vpc_kwargs = {}
         else:
-            vpc = ec2.Vpc.from_lookup(self, "EDCVPC", vpc_id=vpc_id)
+            vpc = ec2.Vpc.from_lookup(self, 'EDCVPC', vpc_id=vpc_id)
             subnet_selection = ec2.SubnetSelection(
-                subnet_filters=[
-                    ec2.SubnetFilter.by_ids(
-                        subnet_ids=subnet_ids
-                    )
-                ]
+                subnet_filters=[ec2.SubnetFilter.by_ids(subnet_ids=subnet_ids)]
             )
             security_group = ec2.SecurityGroup.from_security_group_id(
-                self,
-                'EDCSecurityGroup',
-                security_group
+                self, 'EDCSecurityGroup', security_group
             )
 
             lambda_vpc_kwargs = {
@@ -88,17 +80,18 @@ class CdkOperaDispStack(Stack):
             timeout=Duration.seconds(60),
             memory_size=10240,
             # architecture=_lambda.Architecture.ARM_64,
-            **lambda_vpc_kwargs
+            **lambda_vpc_kwargs,
         )
 
-
-        self.opera_timeseries_function.add_to_role_policy(iam.PolicyStatement(
-            actions=['s3:GetObject', 's3:ListBucket'],
-            resources=[
-                'arn:aws:s3:::asf-cumulus-test-opera-products/*',
-                'arn:aws:s3:::asf-cumulus-test-opera-products/'
-            ]
-        ))
+        self.opera_timeseries_function.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=['s3:GetObject', 's3:ListBucket'],
+                resources=[
+                    'arn:aws:s3:::asf-cumulus-test-opera-products/*',
+                    'arn:aws:s3:::asf-cumulus-test-opera-products/',
+                ],
+            )
+        )
 
         # file_system = efs.FileSystem(self, "MyEfsFileSystem",
         #     vpc=vpc,
@@ -114,15 +107,13 @@ class CdkOperaDispStack(Stack):
         #     # )
         # )
 
-
         apigateway.LambdaRestApi(
             self,
             'DispServiceApi',
             handler=self.opera_timeseries_function,
             proxy=True,
             default_cors_preflight_options=apigateway.CorsOptions(
-                allow_origins=apigateway.Cors.ALL_ORIGINS,
-                allow_methods=apigateway.Cors.ALL_METHODS
+                allow_origins=apigateway.Cors.ALL_ORIGINS, allow_methods=apigateway.Cors.ALL_METHODS
             ),
             deploy_options=apigateway.StageOptions(
                 access_log_destination=apigateway.LogGroupLogDestination(
@@ -132,31 +123,38 @@ class CdkOperaDispStack(Stack):
                         retention=logs.RetentionDays.THREE_MONTHS,
                     )
                 ),
-                access_log_format=apigateway.AccessLogFormat.custom(json.dumps({
-                    'sourceIp': '$context.identity.sourceIp',
-                    'httpMethod': '$context.httpMethod',
-                    'path': '$context.path',
-                    'status': '$context.status',
-                    'responseLength': '$context.responseLength',
-                    'responseLatency': '$context.responseLatency',
-                    'requestTime': '$context.requestTime',
-                    'protocol': '$context.protocol',
-                    'userAgent': '$context.identity.userAgent',
-                    'requestId': '$context.requestId',
-                })),
+                access_log_format=apigateway.AccessLogFormat.custom(
+                    json.dumps(
+                        {
+                            'sourceIp': '$context.identity.sourceIp',
+                            'httpMethod': '$context.httpMethod',
+                            'path': '$context.path',
+                            'status': '$context.status',
+                            'responseLength': '$context.responseLength',
+                            'responseLatency': '$context.responseLatency',
+                            'requestTime': '$context.requestTime',
+                            'protocol': '$context.protocol',
+                            'userAgent': '$context.identity.userAgent',
+                            'requestId': '$context.requestId',
+                        }
+                    )
+                ),
             ),
-            **apigateway_kwargs
+            **apigateway_kwargs,
         )
 
-        self.setup_fargate(dockerfileDir=dockerfileDir, ecs_vpc_kwargs=ecs_vpc_kwargs, apigateway_kwargs=apigateway_kwargs)
-        
+        self.setup_fargate(
+            dockerfileDir=dockerfileDir,
+            ecs_vpc_kwargs=ecs_vpc_kwargs,
+            apigateway_kwargs=apigateway_kwargs,
+        )
 
     def setup_fargate(self, dockerfileDir: str, ecs_vpc_kwargs: dict, apigateway_kwargs: dict):
-        dockerImageAsset = ecr_assets.DockerImageAsset(self, "DispServiceDockerImage",
+        dockerImageAsset = ecr_assets.DockerImageAsset(
+            self,
+            'DispServiceDockerImage',
             directory=dockerfileDir,
-            invalidation=ecr_assets.DockerImageAssetInvalidationOptions(
-                build_args=False
-            )
+            invalidation=ecr_assets.DockerImageAssetInvalidationOptions(build_args=False),
         )
 
         # self.fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
@@ -191,16 +189,13 @@ class CdkOperaDispStack(Stack):
         #     desired_capacity=1
         # )
         task_definition = ecs.FargateTaskDefinition(
-            self,
-            "OperaDispFargateECSTask",
-            cpu=2048,
-            memory_limit_mib=16384
+            self, 'OperaDispFargateECSTask', cpu=2048, memory_limit_mib=16384
         )
         # port_mapping = ecs.PortMapping(container_port=8080)
         container = task_definition.add_container(
-            id="OperaDispFargateContainer", 
+            id='OperaDispFargateContainer',
             image=ecs.ContainerImage.from_docker_image_asset(dockerImageAsset),
-        )#.add_port_mappings(port_mapping)
+        )  # .add_port_mappings(port_mapping)
 
         container.add_port_mappings(
             ecs.PortMapping(
@@ -210,30 +205,32 @@ class CdkOperaDispStack(Stack):
         )
         task_definition.add_to_task_role_policy(
             iam.PolicyStatement(
-                        actions=['s3:GetObject', 's3:ListBucket'],
-                        resources=[
-                            'arn:aws:s3:::asf-cumulus-test-opera-products/*',
-                            'arn:aws:s3:::asf-cumulus-test-opera-products/'
-                        ]
-                    )
+                actions=['s3:GetObject', 's3:ListBucket'],
+                resources=[
+                    'arn:aws:s3:::asf-cumulus-test-opera-products/*',
+                    'arn:aws:s3:::asf-cumulus-test-opera-products/',
+                ],
+            )
         )
 
-        security_group = ec2.SecurityGroup(self, "OperaDispServiceSecurityGroup", vpc=ecs_vpc_kwargs['vpc'])
+        security_group = ec2.SecurityGroup(
+            self, 'OperaDispServiceSecurityGroup', vpc=ecs_vpc_kwargs['vpc']
+        )
         security_group.add_ingress_rule(
             peer=ec2.Peer.ipv4(ecs_vpc_kwargs['vpc'].vpc_cidr_block),
             connection=ec2.Port.tcp(8080),
-            description="Allow http from Opera Disp API Load Balancer"
+            description='Allow http from Opera Disp API Load Balancer',
         )
-        
-        cluster = ecs.Cluster(self, "OperaDispFargateCluster", vpc=ecs_vpc_kwargs['vpc'])
+
+        cluster = ecs.Cluster(self, 'OperaDispFargateCluster', vpc=ecs_vpc_kwargs['vpc'])
         fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
-            self, 
-            "OperaDispFargateService", 
+            self,
+            'OperaDispFargateService',
             cluster=cluster,
             task_definition=task_definition,
-            task_subnets= ecs_vpc_kwargs['task_subnets'],
-            # listener_port=8080,
-            security_groups= [*ecs_vpc_kwargs['security_groups'], security_group],
+            task_subnets=ecs_vpc_kwargs['task_subnets'],
+            listener_port=8080,
+            security_groups=[*ecs_vpc_kwargs['security_groups'], security_group],
             memory_limit_mib=16384,
             cpu=2048,
             desired_count=1,
@@ -260,16 +257,21 @@ class CdkOperaDispStack(Stack):
             create_default_stage=True,
             cors_preflight=apigatewayV2.CorsPreflightOptions(
                 allow_origins=['*'],
-                allow_methods=[apigatewayV2.CorsHttpMethod.POST, apigatewayV2.CorsHttpMethod.GET, apigatewayV2.CorsHttpMethod.HEAD, apigatewayV2.CorsHttpMethod.OPTIONS],
+                allow_methods=[
+                    apigatewayV2.CorsHttpMethod.POST,
+                    apigatewayV2.CorsHttpMethod.GET,
+                    apigatewayV2.CorsHttpMethod.HEAD,
+                    apigatewayV2.CorsHttpMethod.OPTIONS,
+                ],
             ),
             # deploy_options=apigateway.StageOptions(
-                # access_log_destination=apigateway.LogGroupLogDestination(
-                #     logs.LogGroup(
-                #         self,
-                #         'DispServiceFargateApiLogGroup',
-                #         retention=logs.RetentionDays.THREE_MONTHS,
-                #     )
-                # ), # type: ignore
+            # access_log_destination=apigateway.LogGroupLogDestination(
+            #     logs.LogGroup(
+            #         self,
+            #         'DispServiceFargateApiLogGroup',
+            #         retention=logs.RetentionDays.THREE_MONTHS,
+            #     )
+            # ), # type: ignore
             #     access_log_format=apigateway.AccessLogFormat.custom(json.dumps({
             #         'sourceIp': '$context.identity.sourceIp',
             #         'httpMethod': '$context.httpMethod',
@@ -291,7 +293,7 @@ class CdkOperaDispStack(Stack):
             name='V2 VPC Link',
             # subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
             subnet_ids=ecs_vpc_kwargs['subnet_ids'],
-            security_group_ids=ecs_vpc_kwargs['security_group_ids']
+            security_group_ids=ecs_vpc_kwargs['security_group_ids'],
         )
         # http_vpc_link = CfnResource(
         #     self,
@@ -313,18 +315,18 @@ class CdkOperaDispStack(Stack):
         # )
 
         # self.dispApi.root.add_resource("{proxy+}")
-        
+
         vpc_integration = apigatewayV2.CfnIntegration(
             self,
             'DispAPIVPCIntegration',
             description='DISP API VPC Integration',
-            integration_type="HTTP_PROXY",
+            integration_type='HTTP_PROXY',
             connection_id=http_vpc_link.ref,
             connection_type='VPC_LINK',
             api_id=self.dispApi.http_api_id,
             integration_method='ANY',
             payload_format_version='1.0',
-            integration_uri= fargate_service.listener.listener_arn, #"http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
+            integration_uri=fargate_service.listener.listener_arn,  # "http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
             # options=apigateway.IntegrationOptions(
             #     connection_type=apigateway.ConnectionType.VPC_LINK,
             #     request_parameters={
@@ -347,13 +349,13 @@ class CdkOperaDispStack(Stack):
             'DispAPIRoute',
             api_id=self.dispApi.http_api_id,
             route_key='ANY /{proxy+}',
-            target=f'integrations/{vpc_integration.ref}'
+            target=f'integrations/{vpc_integration.ref}',
         )
 
         CfnOutput(
             self,
             'dispAPIUrl',
-            value=self.dispApi.url, # type: ignore
+            value=self.dispApi.url,  # type: ignore
         )
 
         # self.dispApi.root.add_method(
