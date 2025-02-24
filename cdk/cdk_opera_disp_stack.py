@@ -32,7 +32,7 @@ class CdkOperaDispStack(Stack):
             vpc_id = self.node.try_get_context('vpc_id')
             subnet_ids = self.node.try_get_context('subnet_ids').split(',')
             security_group = self.node.try_get_context('security_group')
-
+            security_group_ids = security_group
             if not vpc_id:
                 raise AttributeError()
 
@@ -66,6 +66,7 @@ class CdkOperaDispStack(Stack):
                 'task_subnets': subnet_selection,
                 'security_groups': [security_group],
                 'subnet_ids': subnet_ids,
+                'security_group_ids': security_group_ids,
             }
 
             apigateway_kwargs = {
@@ -290,7 +291,7 @@ class CdkOperaDispStack(Stack):
             name='V2 VPC Link',
             # subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
             subnet_ids=ecs_vpc_kwargs['subnet_ids'],
-            security_group_ids=ecs_vpc_kwargs['security_groups']
+            security_group_ids=ecs_vpc_kwargs['security_group_ids']
         )
         # http_vpc_link = CfnResource(
         #     self,
