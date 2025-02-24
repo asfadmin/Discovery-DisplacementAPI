@@ -287,7 +287,7 @@ class CdkOperaDispStack(Stack):
             self,
             'DispAPIHTTPLink',
             name='V2 VPC Link',
-            subnet_ids=ecs_vpc_kwargs['task_subnets'],
+            subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
             security_group_ids=ecs_vpc_kwargs['security_groups']
         )
         # http_vpc_link = CfnResource(
