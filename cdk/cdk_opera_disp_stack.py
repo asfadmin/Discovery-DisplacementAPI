@@ -323,7 +323,7 @@ class CdkOperaDispStack(Stack):
             integration_type='HTTP_PROXY',
             connection_id=http_vpc_link.ref,
             connection_type='VPC_LINK',
-            api_id=self.dispApi.api_id,
+            api_id=self.dispApi.http_api_id,
             integration_method='ANY',
             payload_format_version='1.0',
             integration_uri=fargate_service.listener.listener_arn,  # "http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
