@@ -283,17 +283,24 @@ class CdkOperaDispStack(Stack):
             # ),
             # **apigateway_kwargs
         )
-
-        http_vpc_link = CfnResource(
+        http_vpc_link = apigatewayV2.CfnVpcLink(
             self,
             'DispAPIHTTPLink',
-            type='AWS::ApiGatewayV2::VpcLink',
-            # properties= {
-                # 'Name': "V2 VPC Link",
-                # 'SubnetIds': ecs_vpc_kwargs['task_subnets'],
-                # 'SecurityGroupIds': ecs_vpc_kwargs['security_groups'],
-        # }
+            name='V2 VPC Link',
+            subnet_ids=ecs_vpc_kwargs['task_subnets'],
+            security_group_ids=ecs_vpc_kwargs['security_groups']
         )
+        # http_vpc_link = CfnResource(
+        #     self,
+        #     'DispAPIHTTPLink',
+        #     type='AWS::ApiGatewayV2::VpcLink',
+        #     properties= {
+        #         'Name': "V2 VPC Link",
+        #         'SubnetIds': ecs_vpc_kwargs['task_subnets'],
+        #     }
+        #         # 'SecurityGroupIds': ecs_vpc_kwargs['security_groups'],
+        # # }
+        # )
 
         # link = apigateway.VpcLink(
         #     self,
