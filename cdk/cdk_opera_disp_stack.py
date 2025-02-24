@@ -289,8 +289,8 @@ class CdkOperaDispStack(Stack):
             'DispAPIHTTPLink',
             type='AWS::ApiGatewayV2::VpcLink',
             properties= {
-                'Name': "V2 VPC Link",
-                'SubnetIds': ecs_vpc_kwargs['task_subnets'],
+                'name': "V2 VPC Link",
+                'subnet_ids': ecs_vpc_kwargs['task_subnets'],
         })
 
         # link = apigateway.VpcLink(
