@@ -293,7 +293,7 @@ class CdkOperaDispStack(Stack):
             name='V2 VPC Link',
             # subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
             subnet_ids=ecs_vpc_kwargs['subnet_ids'],
-            security_group_ids=ecs_vpc_kwargs['security_group_ids'],
+            # security_group_ids=[ecs_vpc_kwargs['security_group_ids'],
         )
         # http_vpc_link = CfnResource(
         #     self,
@@ -315,7 +315,7 @@ class CdkOperaDispStack(Stack):
         # )
 
         # self.dispApi.root.add_resource("{proxy+}")
-
+        
         vpc_integration = apigatewayV2.CfnIntegration(
             self,
             'DispAPIVPCIntegration',
