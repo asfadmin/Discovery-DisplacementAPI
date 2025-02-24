@@ -66,7 +66,7 @@ class CdkOperaDispStack(Stack):
                 'task_subnets': subnet_selection,
                 'security_groups': [security_group],
                 'subnet_ids': subnet_ids,
-                'security_group_ids': security_group_ids,
+                'security_group_ids': [security_group_ids],
             }
 
             apigateway_kwargs = {
