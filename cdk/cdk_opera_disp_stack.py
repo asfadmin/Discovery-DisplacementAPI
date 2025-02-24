@@ -65,6 +65,7 @@ class CdkOperaDispStack(Stack):
                 'vpc': vpc,
                 'task_subnets': subnet_selection,
                 'security_groups': [security_group],
+                'subnet_ids': subnet_ids,
             }
 
             apigateway_kwargs = {
@@ -222,7 +223,7 @@ class CdkOperaDispStack(Stack):
             connection=ec2.Port.tcp(8080),
             description="Allow http from Opera Disp API Load Balancer"
         )
-
+        
         cluster = ecs.Cluster(self, "OperaDispFargateCluster", vpc=ecs_vpc_kwargs['vpc'])
         fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
             self, 
@@ -287,7 +288,8 @@ class CdkOperaDispStack(Stack):
             self,
             'DispAPIHTTPLink',
             name='V2 VPC Link',
-            subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
+            # subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
+            subnet_ids=ecs_vpc_kwargs['subnet_ids'],
             security_group_ids=ecs_vpc_kwargs['security_groups']
         )
         # http_vpc_link = CfnResource(
