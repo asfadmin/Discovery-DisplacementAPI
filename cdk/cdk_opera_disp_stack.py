@@ -13,6 +13,7 @@ from aws_cdk import (
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_ecr_assets as ecr_assets,
+    aws_elasticloadbalancingv2 as elbv2,
     CfnOutput,
     CfnResource,
 )
@@ -226,13 +227,19 @@ class CdkOperaDispStack(Stack):
         # )
 
         cluster = ecs.Cluster(self, 'OperaDispFargateCluster', vpc=ecs_vpc_kwargs['vpc'])
+        loadbalancer = elbv2.NetworkLoadBalancer(self, "OperaDispFargateLB", vpc=ecs_vpc_kwargs['vpc'])
+        listener = loadbalancer.add_listener("OperaDispFargateListener", port=80)
+        listener.add_targets("OperaDispFargateTarget",
+            port=8080
+        )
         fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
             self,
             'OperaDispFargateService',
             cluster=cluster,
             task_definition=task_definition,
             task_subnets=ecs_vpc_kwargs['task_subnets'],
-            listener_port=80,
+            # listener_port=80,
+            load_balancer=loadbalancer,
             security_groups=[*ecs_vpc_kwargs['security_groups']],
             memory_limit_mib=16384,
             cpu=2048,
@@ -242,9 +249,7 @@ class CdkOperaDispStack(Stack):
             # vpc=ecs_vpc_kwargs['vpc'],
             public_load_balancer=False,
         )
-        fargate_service.listener.add_targets("target",
-            port=8080
-        )
+
         
         # CfnOutput(
         #     self,
