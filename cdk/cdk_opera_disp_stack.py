@@ -228,17 +228,17 @@ class CdkOperaDispStack(Stack):
 
         cluster = ecs.Cluster(self, 'OperaDispFargateCluster', vpc=ecs_vpc_kwargs['vpc'])
         loadbalancer = elbv2.NetworkLoadBalancer(self, "OperaDispFargateLB", vpc=ecs_vpc_kwargs['vpc'])
-        listener = loadbalancer.add_listener("OperaDispFargateListener", port=80)
-        listener.add_targets("OperaDispFargateTarget",
-            port=8080
-        )
+        # listener = loadbalancer.add_listener("OperaDispFargateListener", port=80)
+        # listener.add_targets("OperaDispFargateTarget",
+        #     port=8080
+        # )
         fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
             self,
             'OperaDispFargateService',
             cluster=cluster,
             task_definition=task_definition,
             task_subnets=ecs_vpc_kwargs['task_subnets'],
-            # listener_port=80,
+            listener_port=80,
             load_balancer=loadbalancer,
             security_groups=[*ecs_vpc_kwargs['security_groups']],
             memory_limit_mib=16384,
@@ -299,7 +299,7 @@ class CdkOperaDispStack(Stack):
                     apigatewayV2.CorsHttpMethod.OPTIONS,
                 ],
             ),
-            default_integration=HttpNlbIntegration('DispServiceAPINLBIntegration', fargate_service.listener, vpc_link=http_vpc_link)
+            default_integration=HttpNlbIntegration('DispServiceAPINLBIntegration', listener, vpc_link=http_vpc_link)
             # deploy_options=apigateway.StageOptions(
             # access_log_destination=apigateway.LogGroupLogDestination(
             #     logs.LogGroup(
