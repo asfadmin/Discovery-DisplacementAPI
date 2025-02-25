@@ -16,6 +16,9 @@ from aws_cdk import (
     CfnOutput,
     CfnResource,
 )
+
+from aws_cdk.aws_apigatewayv2_integrations import HttpNlbIntegration
+
 from constructs import Construct
 
 
@@ -229,7 +232,7 @@ class CdkOperaDispStack(Stack):
             cluster=cluster,
             task_definition=task_definition,
             task_subnets=ecs_vpc_kwargs['task_subnets'],
-            listener_port=8080,
+            listener_port=80,
             security_groups=[*ecs_vpc_kwargs['security_groups']],
             memory_limit_mib=16384,
             cpu=2048,
@@ -239,7 +242,10 @@ class CdkOperaDispStack(Stack):
             # vpc=ecs_vpc_kwargs['vpc'],
             public_load_balancer=False,
         )
-
+        fargate_service.listener.add_targets("target",
+            port=8080
+        )
+        
         # CfnOutput(
         #     self,
         #     "OperaDispFargateLoadBalancerDNS",
@@ -251,6 +257,30 @@ class CdkOperaDispStack(Stack):
         # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
         # AWS cdk docs not comprehensive on this workflow, example taken from here
         # https://github.com/aws/aws-cdk/issues/26612#issuecomment-1664176179
+
+
+        # http_vpc_link = CfnResource(
+        #     self,
+        #     'DispAPIHTTPLink',
+        #     type='AWS::ApiGatewayV2::VpcLink',
+        #     properties= {
+        #         'Name': "V2 VPC Link",
+        #         'SubnetIds': ecs_vpc_kwargs['task_subnets'],
+        #     }
+        #         # 'SecurityGroupIds': ecs_vpc_kwargs['security_groups'],
+        # # }
+        # )
+
+        http_vpc_link = apigatewayV2.VpcLink(
+            self,
+            'DispAPIHTTPLink',
+            vpc_link_name='V2 VPC http Link',
+            vpc=ecs_vpc_kwargs['vpc'],
+            # subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
+            subnets=ecs_vpc_kwargs['task_subnets'],
+            # security_group_ids=[ecs_vpc_kwargs['security_group_ids'],
+        )
+
         self.dispApi = apigatewayV2.HttpApi(
             self,
             'DispServiceFargateApi',
@@ -264,6 +294,7 @@ class CdkOperaDispStack(Stack):
                     apigatewayV2.CorsHttpMethod.OPTIONS,
                 ],
             ),
+            default_integration=HttpNlbIntegration('', fargate_service.listener, vpc_link=http_vpc_link)
             # deploy_options=apigateway.StageOptions(
             # access_log_destination=apigateway.LogGroupLogDestination(
             #     logs.LogGroup(
@@ -287,25 +318,8 @@ class CdkOperaDispStack(Stack):
             # ),
             # **apigateway_kwargs
         )
-        http_vpc_link = apigatewayV2.CfnVpcLink(
-            self,
-            'DispAPIHTTPLink',
-            name='V2 VPC Link',
-            # subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
-            subnet_ids=ecs_vpc_kwargs['subnet_ids'],
-            # security_group_ids=[ecs_vpc_kwargs['security_group_ids'],
-        )
-        # http_vpc_link = CfnResource(
-        #     self,
-        #     'DispAPIHTTPLink',
-        #     type='AWS::ApiGatewayV2::VpcLink',
-        #     properties= {
-        #         'Name': "V2 VPC Link",
-        #         'SubnetIds': ecs_vpc_kwargs['task_subnets'],
-        #     }
-        #         # 'SecurityGroupIds': ecs_vpc_kwargs['security_groups'],
-        # # }
-        # )
+
+       
 
         # link = apigateway.VpcLink(
         #     self,
@@ -316,47 +330,56 @@ class CdkOperaDispStack(Stack):
 
         # self.dispApi.root.add_resource("{proxy+}")
         
-        vpc_integration = apigatewayV2.CfnIntegration(
-            self,
-            'DispAPIVPCIntegration',
-            description='DISP API VPC Integration',
-            integration_type='HTTP_PROXY',
-            connection_id=http_vpc_link.ref,
-            connection_type='VPC_LINK',
-            api_id=self.dispApi.http_api_id,
-            integration_method='ANY',
-            payload_format_version='1.0',
-            integration_uri=fargate_service.listener.listener_arn,  # "http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
-            # options=apigateway.IntegrationOptions(
-            #     connection_type=apigateway.ConnectionType.VPC_LINK,
-            #     request_parameters={
-            #         "integration.request.path.proxy": "method.request.path.proxy"
-            #     },
-            #     vpc_link=link,
-            #     integration_responses=[
-            #         apigateway.IntegrationResponse(
-            #             status_code="200",
-            #             response_parameters={
-            #                 "application/json": ""
-            #             }
-            #         )
-            #     ]
-            # ),
-        )
+        # vpc_integration = apigatewayV2.CfnIntegration(
+        #     self,
+        #     'DispAPIVPCIntegration',
+        #     description='DISP API VPC Integration',
+        #     integration_type='HTTP_PROXY',
+        #     connection_id=http_vpc_link.ref,
+        #     connection_type='VPC_LINK',
+        #     api_id=self.dispApi.http_api_id,
+        #     integration_method='ANY',
+        #     payload_format_version='1.0',
+        #     integration_uri=fargate_service.listener.listener_arn,  # "http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
+        #     # options=apigateway.IntegrationOptions(
+        #     #     connection_type=apigateway.ConnectionType.VPC_LINK,
+        #     #     request_parameters={
+        #     #         "integration.request.path.proxy": "method.request.path.proxy"
+        #     #     },
+        #     #     vpc_link=link,
+        #     #     integration_responses=[
+        #     #         apigateway.IntegrationResponse(
+        #     #             status_code="200",
+        #     #             response_parameters={
+        #     #                 "application/json": ""
+        #     #             }
+        #     #         )
+        #     #     ]
+        #     # ),
+        # )
         
-        apigatewayV2.CfnRoute(
-            self,
-            'DispAPIRoute',
-            api_id=self.dispApi.http_api_id,
-            route_key='ANY /{proxy+}',
-            target=f'integrations/{vpc_integration.ref}',
-        )
-
-        CfnOutput(
-            self,
-            'dispAPIUrl',
-            value=self.dispApi.url,  # type: ignore
-        )
+        # apigatewayV2.CfnRoute(
+        #     self,
+        #     'DispAPIRoute',
+        #     api_id=self.dispApi.http_api_id,
+        #     route_key='ANY /{proxy+}',
+        #     target=f'integrations/{vpc_integration.ref}',
+        # )
+        # self.dispApi.add_routes(
+        #     path='/',
+        #     methods=[
+        #             apigatewayV2.HttpMethod.POST,
+        #             apigatewayV2.HttpMethod.GET,
+        #             apigatewayV2.HttpMethod.HEAD,
+        #             apigatewayV2.HttpMethod.OPTIONS,
+        #         ],
+        #     integration=vpc_integration,
+        # )
+        # CfnOutput(
+        #     self,
+        #     'dispAPIUrl',
+        #     value=self.dispApi.url,  # type: ignore
+        # )
 
         # self.dispApi.root.add_method(
         #     "ANY",
