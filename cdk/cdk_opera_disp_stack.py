@@ -283,7 +283,7 @@ class CdkOperaDispStack(Stack):
             vpc=ecs_vpc_kwargs['vpc'],
             # subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
             subnets=ecs_vpc_kwargs['task_subnets'],
-            security_groups=ecs_vpc_kwargs['security_groups'],
+            # security_groups=ecs_vpc_kwargs['security_groups'],
         )
 
         self.dispApi = apigatewayV2.HttpApi(
