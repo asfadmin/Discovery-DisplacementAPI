@@ -294,7 +294,7 @@ class CdkOperaDispStack(Stack):
                     apigatewayV2.CorsHttpMethod.OPTIONS,
                 ],
             ),
-            default_integration=HttpNlbIntegration('', fargate_service.listener, vpc_link=http_vpc_link)
+            default_integration=HttpNlbIntegration('DispServiceAPINLBIntegration', fargate_service.listener, vpc_link=http_vpc_link)
             # deploy_options=apigateway.StageOptions(
             # access_log_destination=apigateway.LogGroupLogDestination(
             #     logs.LogGroup(
