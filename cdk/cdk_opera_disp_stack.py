@@ -289,7 +289,7 @@ class CdkOperaDispStack(Stack):
         self.dispApi = apigatewayV2.HttpApi(
             self,
             'DispServiceFargateApi',
-            create_default_stage=True,
+            # create_default_stage=True,
             cors_preflight=apigatewayV2.CorsPreflightOptions(
                 allow_origins=['*'],
                 allow_methods=[
