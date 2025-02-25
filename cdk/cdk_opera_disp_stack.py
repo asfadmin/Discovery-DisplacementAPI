@@ -286,6 +286,13 @@ class CdkOperaDispStack(Stack):
             # security_groups=ecs_vpc_kwargs['security_groups'],
         )
 
+        listener = fargate_service.load_balancer.add_listener("OperaDispFargateListener", port=80)
+        listener.add_targets(
+            "OperaDispFargateTarget",
+            port=8080,
+            protocol=elbv2.Protocol.HTTP,
+        )
+
         self.dispApi = apigatewayV2.HttpApi(
             self,
             'DispServiceFargateApi',
@@ -299,7 +306,7 @@ class CdkOperaDispStack(Stack):
                     apigatewayV2.CorsHttpMethod.OPTIONS,
                 ],
             ),
-            default_integration=HttpNlbIntegration('DispServiceAPINLBIntegration', fargate_service.listener, vpc_link=http_vpc_link)
+            default_integration=HttpNlbIntegration('DispServiceAPINLBIntegration', listener, vpc_link=http_vpc_link)
             # deploy_options=apigateway.StageOptions(
             # access_log_destination=apigateway.LogGroupLogDestination(
             #     logs.LogGroup(
