@@ -240,7 +240,7 @@ class CdkOperaDispStack(Stack):
             max_healthy_percent=100,
             min_healthy_percent=0,
             # vpc=ecs_vpc_kwargs['vpc'],
-            public_load_balancer=False,
+            # public_load_balancer=False,
         )
         fargate_service.listener.add_targets("target",
             port=8080
@@ -271,15 +271,15 @@ class CdkOperaDispStack(Stack):
         # # }
         # )
 
-        http_vpc_link = apigatewayV2.VpcLink(
-            self,
-            'DispAPIHTTPLink',
-            vpc_link_name='V2 VPC http Link',
-            vpc=ecs_vpc_kwargs['vpc'],
-            # subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
-            subnets=ecs_vpc_kwargs['task_subnets'],
-            # security_group_ids=[ecs_vpc_kwargs['security_group_ids'],
-        )
+        # http_vpc_link = apigatewayV2.VpcLink(
+        #     self,
+        #     'DispAPIHTTPLink',
+        #     vpc_link_name='V2 VPC http Link',
+        #     vpc=ecs_vpc_kwargs['vpc'],
+        #     # subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
+        #     subnets=ecs_vpc_kwargs['task_subnets'],
+        #     # security_group_ids=[ecs_vpc_kwargs['security_group_ids'],
+        # )
 
         self.dispApi = apigatewayV2.HttpApi(
             self,
@@ -294,7 +294,7 @@ class CdkOperaDispStack(Stack):
                     apigatewayV2.CorsHttpMethod.OPTIONS,
                 ],
             ),
-            default_integration=HttpNlbIntegration('DispServiceAPINLBIntegration', fargate_service.listener, vpc_link=http_vpc_link)
+            default_integration=HttpNlbIntegration('DispServiceAPINLBIntegration', fargate_service.listener), #, vpc_link=http_vpc_link)
             # deploy_options=apigateway.StageOptions(
             # access_log_destination=apigateway.LogGroupLogDestination(
             #     logs.LogGroup(
