@@ -290,7 +290,7 @@ class CdkOperaDispStack(Stack):
         listener.add_targets(
             "OperaDispFargateTarget",
             port=8080,
-            protocol=elbv2.Protocol.HTTP,
+            # protocol=elbv2.Protocol.HTTP,
         )
 
         self.dispApi = apigatewayV2.HttpApi(
