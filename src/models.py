@@ -4,7 +4,7 @@ from .constants import Polarizations
 
 class GetFramesModel(BaseModel):
     wkt: str
-    flightDirection: str = Field(pattern=r'((ASC)|(DESC))(ENDING)?', default='ASC')
+    flightDirection: str = Field(pattern=r'((ASC)|(DESC))(ENDING)?', default='ASCENDING')
 
     @field_validator('flightDirection', mode='before')
     @classmethod

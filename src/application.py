@@ -85,6 +85,33 @@ def get_frame_ids(wkt_event: GetFramesModel):
         headers=DEFAULT_HEADERS,
     )
 
+@app.post(
+    '/check_aois',
+    description='Returns the frame ids for a given aoi, splitting any cross frames',
+)
+def check_aois(wkt_event: GetFramesModel):
+    wkt = wkt_event.wkt
+    flight_direction = wkt_event.flightDirection
+    overlapping_frames = _get_frames_for_wkt(wkt, flight_direction)
+    frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
+    geometry = shapely_wkt.loads(wkt_event.wkt)
+    gdf = gpd.read_file(frame_path, engine='pyogrio')
+    frames: gpd.GeoDataFrame = gdf[gdf['frame_id'].isin([int(p) for p in overlapping_frames])] # type: ignore
+    intersection = frames.intersection(geometry)
+    output = [(_pad_frame_str(frame_id), geom.wkt) for frame_id, geom in zip(gdf.iloc[intersection.index]['frame_id'], intersection)]
+    return JSONResponse(
+        output,
+        headers=DEFAULT_HEADERS,
+    )
+
+def _pad_frame_str(frame: str):
+    frame_str = str(frame)
+
+    # append leading zeros
+    if len(frame_str) < 5:
+        frame_str = ('0'*(5-len(frame_str))) + frame_str
+
+    return frame_str
 
 def _get_available_file_stores_for_wkt(params: TimeSeriesModel):
     # example:
