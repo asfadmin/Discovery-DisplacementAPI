@@ -86,10 +86,10 @@ def get_frame_ids(wkt_event: GetFramesModel):
     )
 
 @app.post(
-    '/check_aois',
+    '/frame_intersection',
     description='Returns the frame ids for a given aoi, splitting any cross frames',
 )
-def check_aois(wkt_event: GetFramesModel):
+def frame_intersection(wkt_event: GetFramesModel):
     wkt = wkt_event.wkt
     flight_direction = wkt_event.flightDirection
     overlapping_frames = _get_frames_for_wkt(wkt, flight_direction)
