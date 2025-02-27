@@ -209,17 +209,18 @@ class CdkOperaDispStack(Stack):
         nlb = fargate_service.load_balancer
 
         # direct traffic to container port 8080
-        fargate_service.listener.add_targets(
-            "OperaDispFargateTarget",
-            port=8080,
-            protocol=elbv2.Protocol.TCP,
-            target_group_name=fargate_service.target_group.target_group_name,
-            health_check=elbv2.HealthCheck(
-                path='/',
-                interval= Duration.seconds(30),
-                timeout=Duration.seconds(5)
-            ),
-        )
+        # fargate_service.listener.add_targets(
+        #     "OperaDispFargateTarget",
+        #     port=8080,
+        #     protocol=elbv2.Protocol.TCP,
+        #     targets=[nlb],
+        #     target_group_name='OperaDispFargateTargetForAPIGateway',
+        #     health_check=elbv2.HealthCheck(
+        #         path='/',
+        #         interval= Duration.seconds(30),
+        #         timeout=Duration.seconds(5)
+        #     ),
+        # )
 
         self.dispApi = apigateway.RestApi(
             self,
