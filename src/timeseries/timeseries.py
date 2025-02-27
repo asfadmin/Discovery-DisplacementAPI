@@ -15,6 +15,8 @@ import pandas
 from src import api_logger
 from time import perf_counter
 
+from src.exceptions import OutdatedStackException
+
 layer_types = ['short_wavelength_displacement']
 
 _data_variables = [
@@ -50,7 +52,16 @@ def get_timeseries_over_aoi(
     values = open_zarr_store(file_system=fs)
     api_logger.info(f'Remote dataset opened: {perf_counter() - start} seconds')
 
-    # values = _drop_min_version(values)
+    pre_filter_count = len(values.source_file_name)
+    values = _latest_product_versions(values)
+    values = _minimum_version(values)
+    post_filter_count = len(values.source_file_name)
+    
+    api_logger.info(f'Filtered {pre_filter_count-post_filter_count} duplicate/old products from stack.')
+
+    if post_filter_count == 0:
+        raise OutdatedStackException(status_code=502, detail=f'No V1.0+ products found in stack "{file_store.split("/")[-1]}"')
+    
     start = perf_counter()
     _calc_temporal_offsets(values)
     api_logger.info(f'Temporal Offset calc: {perf_counter() - start} seconds')
@@ -61,10 +72,18 @@ def get_timeseries_over_aoi(
     elif isinstance(geometry, Polygon) or isinstance(geometry, LineString):
         values = _read_layers_with_aoi(values, geometry)
     api_logger.info(f'AOI Read Speed: {perf_counter() - start} seconds')
-    # [(short_wavelength_displacement, reference_date, )]
-    # values = _fix_rolling_reference(values)
     return _pandas_output(values)
 
+def _latest_product_versions(values: xr.Dataset) -> xr.Dataset:
+    """Remove duplicate products by their secondary datetime, keeping the latest version"""
+    secondary = values['secondary_datetime'].to_series().sort_values()
+    latest = secondary.drop_duplicates(keep='last').index.values
+    return values.sel(source_file_name=latest)
+
+def _minimum_version(values: xr.Dataset) -> xr.Dataset:
+    """Only keep products of minimum version `1.x`"""
+    mask = values.coords['source_file_name'].str.match(r'.*(v1\..).*\.nc?')
+    return values.isel(source_file_name=mask)
 
 # https://docs.xarray.dev/en/stable/generated/xarray.open_mfdataset.html#xarray.open_mfdataset
 # pass to pre-process
@@ -181,9 +200,10 @@ def _pandas_output(data: xr.Dataset):
     data = data.sortby('secondary_datetime')
     pandas_values = data.to_dataframe()
     pandas_values = _fix_rolling_reference(pandas_values)
-    # sort by time, make fileName column the index for our data for nicer json output
+    
     pandas_values = pandas_values.reset_index().set_index('source_file_name')
     pandas_values.loc['mean'] = pandas_values.mean(skipna=True, numeric_only=True)
     out = pandas_values.to_json(date_format='iso', orient='index')
     api_logger.info(f'Pandas conversion: {perf_counter() - start} seconds')
     return out
+    

@@ -9,5 +9,5 @@ api_logger = logger.get_logger(__name__, logging.DEBUG)
 
 from . import models  # noqa: E402, F401
 from . import application  # noqa: E402, F401
-from .exceptions import MissingFrameException  # noqa: E402, F401
+from .exceptions import MissingFrameException, OutdatedStackException  # noqa: E402, F401
 from .constants import Polarizations, fsspec_params  # noqa: E402, F401
