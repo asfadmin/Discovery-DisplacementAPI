@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 from .constants import Polarizations
 
@@ -19,3 +19,4 @@ class GetFramesModel(BaseModel):
 class TimeSeriesModel(GetFramesModel):
     bucket: str = Field(pattern=r'[^/^\\]*')
     polarization: Polarizations = Polarizations.VV
+    frameId: Optional[str] = Field(None, pattern=r'^\d{5}$')
