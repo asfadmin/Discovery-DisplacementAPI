@@ -112,7 +112,6 @@ class CdkOperaDispStack(Stack):
             'DispServiceApi',
             handler=self.opera_timeseries_function,
             proxy=True,
-            integration_options=apigateway.LambdaIntegrationOptions(timeout=Duration.seconds(60)),
             default_cors_preflight_options=apigateway.CorsOptions(
                 allow_origins=apigateway.Cors.ALL_ORIGINS, allow_methods=apigateway.Cors.ALL_METHODS
             ),
