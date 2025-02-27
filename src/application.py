@@ -56,9 +56,14 @@ def get_timeseries(series: TimeSeriesModel):
 
     api_logger.debug(f'wkt loaded: {geometry.wkt}')
 
-    zarr_stores = _get_available_file_stores_for_wkt(series)
+    file_store = _get_zarr_store_uri(
+        bucket=series.bucket,
+        wkt=series.wkt,
+        frame_id=series.frameId,
+        polarization=series.polarization.value,
+        flight_direction=series.flightDirection
+        )
 
-    file_store = zarr_stores[0]
     api_logger.info(f'using file store: {file_store}')
 
     try:
@@ -113,16 +118,32 @@ def _pad_frame_str(frame: str):
 
     return frame_str
 
-def _get_available_file_stores_for_wkt(params: TimeSeriesModel):
+def _get_file_store_for_wkt(bucket: str, frame_id: str, polarization: str):
+    return f's3://{bucket}/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_short_wavelength_displacement.zarr.json.gz'
+
+def _get_zarr_store_uri(bucket: str, wkt: str, frame_id: str | None, polarization: str, flight_direction: str):
+    if isinstance(frame_id, str): 
+        zarr_store = _get_file_store_for_wkt(bucket=bucket, frame_id=frame_id, polarization=polarization)
+
+        s3 = s3fs.S3FileSystem(anon=False)
+        try:
+            if s3.exists(zarr_store):
+                return zarr_store
+        except Exception as exc:
+            logging.debug(f'Failed to open store "{zarr_store}". Original exception: {exc}')
+        raise MissingFrameException(
+            400, f'No data found for the given area of interest {wkt}'
+        )
+    else:
+        return _get_available_file_stores_for_wkt(bucket=bucket, wkt=wkt, polarization=polarization, flight_direction=flight_direction)[0]
+
+def _get_available_file_stores_for_wkt(bucket: str, wkt: str, polarization: str, flight_direction: str):
     # example:
     # s3://asf-cumulus-test-opera-products/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F44328_VV_V1/OPERA_L3_DISP-S1_IW_F44328_VV_short_wavelength_displacement.zarr.json.gz
     
-    polarization = params.polarization.value
-
     zarr_stores = [
-        # f's3://{params.bucket}/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}.json.zarr.gz'
-        f's3://{params.bucket}/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_short_wavelength_displacement.zarr.json.gz'
-        for frame_id in _get_frames_for_wkt(params.wkt, params.flightDirection)
+        _get_file_store_for_wkt(bucket=bucket, frame_id=frame_id, polarization=polarization)
+        for frame_id in _get_frames_for_wkt(wkt, flight_direction)
     ]
 
     s3 = s3fs.S3FileSystem(anon=False)
@@ -137,7 +158,7 @@ def _get_available_file_stores_for_wkt(params: TimeSeriesModel):
 
     if len(available_zarr_stores) == 0:
         raise MissingFrameException(
-            400, f'No data found for the given area of interest {params.wkt}'
+            400, f'No data found for the given area of interest {wkt}'
         )
 
     return available_zarr_stores
@@ -165,7 +186,7 @@ def _get_frames_for_wkt(wkt: str, flight_direction: str) -> list[str]:
         if len(frame_str) < 5:
             frame_str = ('0'*(5-len(frame_str))) + frame_str
 
-        frame_strings.append(str(frame))
+        frame_strings.append(str(frame_str))
     
     return sorted(frame_strings)
     # return JSONResponse({'frame_ids': sorted(list(frame_ids)), 'wkt': wkt}, headers=DEFAULT_HEADERS)
