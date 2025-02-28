@@ -101,30 +101,30 @@ class CdkFargateOperaDispStack(Stack):
         #     instance_type=ec2.InstanceType("t2.xlarge"),
         #     desired_capacity=1
         # )
-        task_definition = ecs.FargateTaskDefinition(
-            self, 'OperaDispFargateECSTask', cpu=2048, memory_limit_mib=16384
-        )
-        # port_mapping = ecs.PortMapping(container_port=8080)
-        container = task_definition.add_container(
-            id='OperaDispFargateContainer',
-            image=ecs.ContainerImage.from_docker_image_asset(dockerImageAsset),
-        )  # .add_port_mappings(port_mapping)
+        # task_definition = ecs.FargateTaskDefinition(
+        #     self, 'OperaDispFargateECSTask', cpu=2048, memory_limit_mib=16384
+        # )
+        # # port_mapping = ecs.PortMapping(container_port=8080)
+        # container = task_definition.add_container(
+        #     id='OperaDispFargateContainer',
+        #     image=ecs.ContainerImage.from_docker_image_asset(dockerImageAsset),
+        # )  # .add_port_mappings(port_mapping)
 
-        container.add_port_mappings(
-            ecs.PortMapping(
-                container_port=8080,
-                host_port=8080,
-            )
-        )
-        task_definition.add_to_task_role_policy(
-            iam.PolicyStatement(
-                actions=['s3:GetObject', 's3:ListBucket'],
-                resources=[
-                    'arn:aws:s3:::asf-cumulus-test-opera-products/*',
-                    'arn:aws:s3:::asf-cumulus-test-opera-products/',
-                ],
-            )
-        )
+        # container.add_port_mappings(
+        #     ecs.PortMapping(
+        #         container_port=8080,
+        #         host_port=8080,
+        #     )
+        # )
+        # task_definition.add_to_task_role_policy(
+        #     iam.PolicyStatement(
+        #         actions=['s3:GetObject', 's3:ListBucket'],
+        #         resources=[
+        #             'arn:aws:s3:::asf-cumulus-test-opera-products/*',
+        #             'arn:aws:s3:::asf-cumulus-test-opera-products/',
+        #         ],
+        #     )
+        # )
 
         # security_group = ec2.SecurityGroup(
         #     self, 'OperaDispServiceSecurityGroup', vpc=ecs_vpc_kwargs['vpc']
@@ -139,97 +139,97 @@ class CdkFargateOperaDispStack(Stack):
 
         # cluster = ecs.Cluster(self, 'OperaDispFargateCluster', vpc=ecs_vpc_kwargs['vpc'])
 
-        fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
-            self,
-            'OperaDispFargateService',
-            task_definition=task_definition,
-            memory_limit_mib=16384,
-            cpu=2048,
-            desired_count=1,
-            min_healthy_percent=0,
-            max_healthy_percent=100,
-            public_load_balancer=False,
-            listener_port=8080,
-            **fargate_vpc_kwargs,
-        )
-       
-        self.nlb = fargate_service.load_balancer
-        # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
-        # AWS cdk docs not comprehensive on this workflow, example taken from here
-        # https://github.com/aws/aws-cdk/issues/26612#issuecomment-1664176179
-        # self.dispApi = apigatewayV2.HttpApi(
+        # fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
         #     self,
-        #     'DispServiceFargateApi',
-        #     api_name='DispServiceFargateApi',
-        #     create_default_stage=True,
-        #     cors_preflight=apigatewayV2.CorsPreflightOptions(
-        #         allow_origins=['*'],
-        #         allow_methods=[
-        #             apigatewayV2.CorsHttpMethod.POST,
-        #             apigatewayV2.CorsHttpMethod.GET,
-        #             apigatewayV2.CorsHttpMethod.HEAD,
-        #             apigatewayV2.CorsHttpMethod.OPTIONS,
-        #         ],
+        #     'OperaDispFargateService',
+        #     task_definition=task_definition,
+        #     memory_limit_mib=16384,
+        #     cpu=2048,
+        #     desired_count=1,
+        #     min_healthy_percent=0,
+        #     max_healthy_percent=100,
+        #     public_load_balancer=False,
+        #     listener_port=8080,
+        #     **fargate_vpc_kwargs,
+        # )
+       
+        # self.nlb = fargate_service.load_balancer
+        # # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
+        # # AWS cdk docs not comprehensive on this workflow, example taken from here
+        # # https://github.com/aws/aws-cdk/issues/26612#issuecomment-1664176179
+        # # self.dispApi = apigatewayV2.HttpApi(
+        # #     self,
+        # #     'DispServiceFargateApi',
+        # #     api_name='DispServiceFargateApi',
+        # #     create_default_stage=True,
+        # #     cors_preflight=apigatewayV2.CorsPreflightOptions(
+        # #         allow_origins=['*'],
+        # #         allow_methods=[
+        # #             apigatewayV2.CorsHttpMethod.POST,
+        # #             apigatewayV2.CorsHttpMethod.GET,
+        # #             apigatewayV2.CorsHttpMethod.HEAD,
+        # #             apigatewayV2.CorsHttpMethod.OPTIONS,
+        # #         ],
+        # #     ),
+        # # )
+
+        # link = apigateway.VpcLink(
+        #     self,
+        #     'DispAPIFargateV1HTTPLink',
+        #     vpc_link_name='Opera Disp Fargate V1 VPC Link',
+        #     targets=[self.nlb]
+        #     # subnet_ids=vpc_link_kwargs['subnet_ids']
+        # )
+        # integration = apigateway.Integration(
+        #     type=apigateway.IntegrationType.HTTP_PROXY,
+        #     integration_http_method='ANY',
+        #     options=apigateway.IntegrationOptions(
+        #         connection_type=apigateway.ConnectionType.VPC_LINK, vpc_link=link
         #     ),
         # )
 
-        link = apigateway.VpcLink(
-            self,
-            'DispAPIFargateV1HTTPLink',
-            vpc_link_name='Opera Disp Fargate V1 VPC Link',
-            targets=[self.nlb]
-            # subnet_ids=vpc_link_kwargs['subnet_ids']
-        )
-        integration = apigateway.Integration(
-            type=apigateway.IntegrationType.HTTP_PROXY,
-            integration_http_method='ANY',
-            options=apigateway.IntegrationOptions(
-                connection_type=apigateway.ConnectionType.VPC_LINK, vpc_link=link
-            ),
-        )
-
-        self.disp_api = apigateway.RestApi(
-            self,
-            'DispServiceFargateStackApi',
-            default_cors_preflight_options=apigateway.CorsOptions(
-                allow_origins=apigateway.Cors.ALL_ORIGINS, allow_methods=apigateway.Cors.ALL_METHODS
-            ),
-            deploy_options=apigateway.StageOptions(
-                access_log_destination=apigateway.LogGroupLogDestination(
-                    logs.LogGroup(
-                        self,
-                        'DispServiceApiLogGroup',
-                        retention=logs.RetentionDays.THREE_MONTHS,
-                    )
-                ), # type: ignore
-                access_log_format=apigateway.AccessLogFormat.custom(
-                    json.dumps(
-                        {
-                            'sourceIp': '$context.identity.sourceIp',
-                            'httpMethod': '$context.httpMethod',
-                            'path': '$context.path',
-                            'status': '$context.status',
-                            'responseLength': '$context.responseLength',
-                            'responseLatency': '$context.responseLatency',
-                            'requestTime': '$context.requestTime',
-                            'protocol': '$context.protocol',
-                            'userAgent': '$context.identity.userAgent',
-                            'requestId': '$context.requestId',
-                        }
-                    )
-                ),
-            ),
-            endpoint_configuration= apigateway.EndpointConfiguration(
-                # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
-                types=[apigateway.EndpointType.PRIVATE]
-            ),
-            default_integration=integration,
-        )
-        self.disp_api.root.add_proxy()
+        # self.disp_api = apigateway.RestApi(
+        #     self,
+        #     'DispServiceFargateStackApi',
+        #     default_cors_preflight_options=apigateway.CorsOptions(
+        #         allow_origins=apigateway.Cors.ALL_ORIGINS, allow_methods=apigateway.Cors.ALL_METHODS
+        #     ),
+        #     deploy_options=apigateway.StageOptions(
+        #         access_log_destination=apigateway.LogGroupLogDestination(
+        #             logs.LogGroup(
+        #                 self,
+        #                 'DispServiceApiLogGroup',
+        #                 retention=logs.RetentionDays.THREE_MONTHS,
+        #             )
+        #         ), # type: ignore
+        #         access_log_format=apigateway.AccessLogFormat.custom(
+        #             json.dumps(
+        #                 {
+        #                     'sourceIp': '$context.identity.sourceIp',
+        #                     'httpMethod': '$context.httpMethod',
+        #                     'path': '$context.path',
+        #                     'status': '$context.status',
+        #                     'responseLength': '$context.responseLength',
+        #                     'responseLatency': '$context.responseLatency',
+        #                     'requestTime': '$context.requestTime',
+        #                     'protocol': '$context.protocol',
+        #                     'userAgent': '$context.identity.userAgent',
+        #                     'requestId': '$context.requestId',
+        #                 }
+        #             )
+        #         ),
+        #     ),
+        #     endpoint_configuration= apigateway.EndpointConfiguration(
+        #         # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
+        #         types=[apigateway.EndpointType.PRIVATE]
+        #     ),
+        #     default_integration=integration,
+        # )
+        # self.disp_api.root.add_proxy()
 
 
-        CfnOutput(
-            self,
-            'dispAPIV1Url',
-            value=self.disp_api.url,  # type: ignore
-        )
+        # CfnOutput(
+        #     self,
+        #     'dispAPIV1Url',
+        #     value=self.disp_api.url,  # type: ignore
+        # )
