@@ -38,7 +38,8 @@ class CdkOperaDispStack(Stack):
         except AttributeError:
             lambda_vpc_kwargs = {}
             apigateway_kwargs = {}
-            ecs_vpc_kwargs = {}
+            fargate_vpc_kwargs = {}
+            vpc_link_kwargs = {}
         else:
             vpc = ec2.Vpc.from_lookup(self, 'EDCVPC', vpc_id=vpc_id)
             subnet_selection = ec2.SubnetSelection(
@@ -54,13 +55,18 @@ class CdkOperaDispStack(Stack):
                 'security_groups': [security_group],
             }
 
-            ecs_vpc_kwargs = {
+            fargate_vpc_kwargs = {
                 'vpc': vpc,
                 'task_subnets': subnet_selection,
                 'security_groups': [security_group],
-                'subnet_ids': subnet_ids,
-                'security_group_ids': [security_group_ids],
             }
+
+            vpc_link_kwargs = {
+                'subnet_ids': subnet_ids,
+                # 'security_group_ids': [security_group_ids],
+            }
+
+            
 
             apigateway_kwargs = {
                 'endpoint_configuration': apigateway.EndpointConfiguration(
@@ -146,11 +152,11 @@ class CdkOperaDispStack(Stack):
 
         self.setup_fargate(
             dockerfileDir=dockerfileDir,
-            ecs_vpc_kwargs=ecs_vpc_kwargs,
-            apigateway_kwargs=apigateway_kwargs,
+            fargate_vpc_kwargs=fargate_vpc_kwargs,
+            vpc_link_kwargs=vpc_link_kwargs,
         )
 
-    def setup_fargate(self, dockerfileDir: str, ecs_vpc_kwargs: dict, apigateway_kwargs: dict):
+    def setup_fargate(self, dockerfileDir: str, fargate_vpc_kwargs: dict, vpc_link_kwargs: dict):
         dockerImageAsset = ecr_assets.DockerImageAsset(
             self,
             'DispServiceDockerImage',
@@ -240,7 +246,7 @@ class CdkOperaDispStack(Stack):
             desired_count=1,
             max_healthy_percent=100,
             public_load_balancer=False,
-            **ecs_vpc_kwargs
+            **fargate_vpc_kwargs
         )
        
         self.nlb = fargate_service.load_balancer
@@ -260,59 +266,14 @@ class CdkOperaDispStack(Stack):
                     apigatewayV2.CorsHttpMethod.OPTIONS,
                 ],
             ),
-            # deploy_options=apigateway.StageOptions(
-            # access_log_destination=apigateway.LogGroupLogDestination(
-            #     logs.LogGroup(
-            #         self,
-            #         'DispServiceFargateApiLogGroup',
-            #         retention=logs.RetentionDays.THREE_MONTHS,
-            #     )
-            # ), # type: ignore
-            #     access_log_format=apigateway.AccessLogFormat.custom(json.dumps({
-            #         'sourceIp': '$context.identity.sourceIp',
-            #         'httpMethod': '$context.httpMethod',
-            #         'path': '$context.path',
-            #         'status': '$context.status',
-            #         'responseLength': '$context.responseLength',
-            #         'responseLatency': '$context.responseLatency',
-            #         'requestTime': '$context.requestTime',
-            #         'protocol': '$context.protocol',
-            #         'userAgent': '$context.identity.userAgent',
-            #         'requestId': '$context.requestId',
-            #     })),
-            # ),
-            # **apigateway_kwargs
         )
 
-        # apigatewayV2.HttpIntegration()
         http_vpc_link = apigatewayV2.CfnVpcLink(
             self,
             'DispAPIHTTPLink',
             name='V2 VPC Link',
-            # subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
-            subnet_ids=ecs_vpc_kwargs['subnet_ids'],
-            # security_group_ids=ecs_vpc_kwargs['security_group_ids']
+            **vpc_link_kwargs,
         )
-        # http_vpc_link = CfnResource(
-        #     self,
-        #     'DispAPIHTTPLink',
-        #     type='AWS::ApiGatewayV2::VpcLink',
-        #     properties= {
-        #         'Name': "V2 VPC Link",
-        #         'SubnetIds': ecs_vpc_kwargs['task_subnets'],
-        #     }
-        #         # 'SecurityGroupIds': ecs_vpc_kwargs['security_groups'],
-        # # }
-        # )
-
-        # link = apigateway.VpcLink(
-        #     self,
-        #     "DispServiceFargateLink",
-        #     description="Link between the network load balance for the fargate service",
-        #     targets=[fargate_service.load_balancer],
-        # )
-
-        # self.dispApi.root.add_resource("{proxy+}")
         
         vpc_integration = apigatewayV2.CfnIntegration(
             self,
@@ -325,21 +286,6 @@ class CdkOperaDispStack(Stack):
             integration_method='ANY',
             payload_format_version='1.0',
             integration_uri=fargate_service.listener.listener_arn,  # "http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
-            # options=apigateway.IntegrationOptions(
-            #     connection_type=apigateway.ConnectionType.VPC_LINK,
-            #     request_parameters={
-            #         "integration.request.path.proxy": "method.request.path.proxy"
-            #     },
-            #     vpc_link=link,
-            #     integration_responses=[
-            #         apigateway.IntegrationResponse(
-            #             status_code="200",
-            #             response_parameters={
-            #                 "application/json": ""
-            #             }
-            #         )
-            #     ]
-            # ),
         )
         
         apigatewayV2.CfnRoute(
@@ -355,22 +301,3 @@ class CdkOperaDispStack(Stack):
             'dispAPIUrl',
             value=self.dispApi.url,  # type: ignore
         )
-
-        # self.dispApi.root.add_method(
-        #     "ANY",
-        #     vpc_integration,
-        #     request_parameters={"method.request.path.proxy": True},
-        #     method_responses=[
-        #         apigateway.MethodResponse(
-        #             status_code="200"
-        #         )
-        #     ]
-        # )
-        # effectively do what LambdaRestApi.handler manually
-        # default_method_options = apigateway.MethodOptions(
-        #     request_parameters={"method.request.path.proxy": True},
-        # )
-        # self.dispApi.root.add_proxy(
-        #     default_integration=vpc_integration,
-        #     default_method_options=default_method_options,
-        # )
