@@ -214,18 +214,18 @@ class CdkOperaDispStack(Stack):
             )
         )
 
-        security_group = ec2.SecurityGroup(
-            self, 'OperaDispServiceSecurityGroup', vpc=ecs_vpc_kwargs['vpc']
-        )
-        security_group.add_ingress_rule(
-            peer=ec2.Peer.ipv4(ecs_vpc_kwargs['vpc'].vpc_cidr_block),
-            connection=ec2.Port.tcp(8080),
-            description='Allow http from Opera Disp API Load Balancer',
-        )
+        # security_group = ec2.SecurityGroup(
+        #     self, 'OperaDispServiceSecurityGroup', vpc=ecs_vpc_kwargs['vpc']
+        # )
+        # security_group.add_ingress_rule(
+        #     peer=ec2.Peer.ipv4(ecs_vpc_kwargs['vpc'].vpc_cidr_block),
+        #     connection=ec2.Port.tcp(8080),
+        #     description='Allow http from Opera Disp API Load Balancer',
+        # )
 
 
 
-        cluster = ecs.Cluster(self, 'OperaDispFargateCluster', vpc=ecs_vpc_kwargs['vpc'])
+        # cluster = ecs.Cluster(self, 'OperaDispFargateCluster', vpc=ecs_vpc_kwargs['vpc'])
         # service_sg = ec2.SecurityGroup(self, "OperaDispServiceSecurityGroup", vpc=ecs_vpc_kwargs['vpc'])
         # service_sg.add_ingress_rule(
         #     peer=ec2.Peer.ipv4(ecs_vpc_kwargs['vpc'].vpc_cidr_block),
@@ -234,43 +234,16 @@ class CdkOperaDispStack(Stack):
         fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
             self,
             'OperaDispFargateService',
-            cluster=cluster,
             task_definition=task_definition,
-            task_subnets=ecs_vpc_kwargs['task_subnets'],
-            # listener_port=80,
-            security_groups=[*ecs_vpc_kwargs['security_groups'], security_group],
             memory_limit_mib=16384,
             cpu=2048,
             desired_count=1,
             max_healthy_percent=100,
-            # min_healthy_percent=0,
-            # vpc=ecs_vpc_kwargs['vpc'],
             public_load_balancer=False,
+            **ecs_vpc_kwargs
         )
-        
-
-
-        # listener = fargate_service.load_balancer.add_listener("OperaDispFargateListener", port=80)
-        # fargate_service.listener.add_targets(
-        #     "OperaDispFargateTarget",
-        #     port=8080,
-        #     protocol=elbv2.Protocol.TCP,
-        #     target_group_name=fargate_service.target_group.target_group_name,
-        #     health_check=elbv2.HealthCheck(
-        #         path='/',
-        #         interval= Duration.seconds(30),
-        #         timeout=Duration.seconds(5)
-        #     ),
-        # )
-
-        # CfnOutput(
-        #     self,
-        #     "OperaDispFargateLoadBalancerDNS",
-        #     value=fargate_service.load_balancer.load_balancer_dns_name,
-        # )
-
-        # self.nlb = self.fargate_service.load_balancer
-
+       
+        self.nlb = fargate_service.load_balancer
         # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
         # AWS cdk docs not comprehensive on this workflow, example taken from here
         # https://github.com/aws/aws-cdk/issues/26612#issuecomment-1664176179
@@ -318,7 +291,7 @@ class CdkOperaDispStack(Stack):
             name='V2 VPC Link',
             # subnet_ids=[*ecs_vpc_kwargs['task_subnets']],
             subnet_ids=ecs_vpc_kwargs['subnet_ids'],
-            # security_group_ids=[ecs_vpc_kwargs['security_group_ids'],
+            # security_group_ids=ecs_vpc_kwargs['security_group_ids']
         )
         # http_vpc_link = CfnResource(
         #     self,
