@@ -43,11 +43,16 @@ class CdkFargateOperaDispStack(Stack):
             security_group = ec2.SecurityGroup.from_security_group_id(
                 self, 'EDCSecurityGroup', security_group
             )
+            service_sg = ec2.SecurityGroup(self, "OperaDispServiceSecurityGroup", vpc=vpc)
+            service_sg.add_ingress_rule(
+                peer=ec2.Peer.ipv4(vpc.vpc_cidr_block),
+                connection=ec2.Port.tcp(80),
+            )
 
             fargate_vpc_kwargs = {
                 'vpc': vpc,
                 'task_subnets': subnet_selection,
-                'security_groups': [security_group],
+                'security_groups': [security_group, service_sg],
             }
 
             vpc_link_kwargs = {
@@ -132,11 +137,6 @@ class CdkFargateOperaDispStack(Stack):
 
 
         # cluster = ecs.Cluster(self, 'OperaDispFargateCluster', vpc=ecs_vpc_kwargs['vpc'])
-        service_sg = ec2.SecurityGroup(self, "OperaDispServiceSecurityGroup", vpc=fargate_vpc_kwargs['vpc'])
-        service_sg.add_ingress_rule(
-            peer=ec2.Peer.ipv4(fargate_vpc_kwargs['vpc'].vpc_cidr_block),
-            connection=ec2.Port.tcp(80),
-        )
 
         fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
             self,
@@ -148,7 +148,6 @@ class CdkFargateOperaDispStack(Stack):
             max_healthy_percent=100,
             public_load_balancer=False,
             **fargate_vpc_kwargs,
-            security_groups=[*fargate_vpc_kwargs['security_groups'], service_sg]
         )
        
         self.nlb = fargate_service.load_balancer
