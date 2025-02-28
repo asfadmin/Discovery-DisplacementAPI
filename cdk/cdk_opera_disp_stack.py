@@ -150,11 +150,11 @@ class CdkOperaDispStack(Stack):
             **apigateway_kwargs,
         )
 
-        self.setup_fargate(
-            dockerfileDir=dockerfileDir,
-            fargate_vpc_kwargs=fargate_vpc_kwargs,
-            vpc_link_kwargs=vpc_link_kwargs,
-        )
+        # self.setup_fargate(
+        #     dockerfileDir=dockerfileDir,
+        #     fargate_vpc_kwargs=fargate_vpc_kwargs,
+        #     vpc_link_kwargs=vpc_link_kwargs,
+        # )
 
     def setup_fargate(self, dockerfileDir: str, fargate_vpc_kwargs: dict, vpc_link_kwargs: dict):
         dockerImageAsset = ecr_assets.DockerImageAsset(
