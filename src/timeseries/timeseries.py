@@ -81,8 +81,8 @@ def _latest_product_versions(values: xr.Dataset) -> xr.Dataset:
     return values.sel(source_file_name=latest)
 
 def _minimum_version(values: xr.Dataset) -> xr.Dataset:
-    """Only keep products of minimum version `1.x`"""
-    mask = values.coords['source_file_name'].str.match(r'.*(v1\..).*\.nc?')
+    """Only keep products of minimum version `0.9` or above"""
+    mask = values.coords['source_file_name'].str.match(r'.*((v1\..)|(v0\.9)).*\.nc?')
     return values.isel(source_file_name=mask)
 
 # https://docs.xarray.dev/en/stable/generated/xarray.open_mfdataset.html#xarray.open_mfdataset
