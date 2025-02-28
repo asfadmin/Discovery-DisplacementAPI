@@ -147,6 +147,7 @@ class CdkFargateOperaDispStack(Stack):
             desired_count=1,
             max_healthy_percent=100,
             public_load_balancer=False,
+            listener_port=8080,
             **fargate_vpc_kwargs,
         )
        
