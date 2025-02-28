@@ -3,6 +3,7 @@
 # from https://docs.aws.amazon.com/cdk/v2/guide/serverless_example.html
 import aws_cdk as cdk
 from cdk_opera_disp_stack import CdkOperaDispStack
+from cdk_fargate_opera_disp_stack import CdkFargateOperaDispStack
 import os
 
 app = cdk.App()
@@ -18,4 +19,13 @@ CdkOperaDispStack(
     construct_id='CdkOperaDispStack',
     deployment_environment='test',
 )
+
+CdkFargateOperaDispStack(
+    app,
+    env=env,
+    description='Displacement Timeseries Fargate Stack',
+    construct_id='CdkFargateOperaDispStack',
+    deployment_environment='test',
+)
+
 app.synth()
