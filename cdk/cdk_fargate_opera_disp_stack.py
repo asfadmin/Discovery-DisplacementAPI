@@ -191,7 +191,6 @@ class CdkFargateOperaDispStack(Stack):
         self.disp_api = apigateway.RestApi(
             self,
             'DispServiceFargateStackApi',
-            proxy=True,
             default_cors_preflight_options=apigateway.CorsOptions(
                 allow_origins=apigateway.Cors.ALL_ORIGINS, allow_methods=apigateway.Cors.ALL_METHODS
             ),
