@@ -142,6 +142,7 @@ class CdkFargateOperaDispStack(Stack):
         )
        
         self.nlb = fargate_service.load_balancer
+        self.nlb.add_security_group(security_group)
         # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
         # AWS cdk docs not comprehensive on this workflow, example taken from here
         # https://github.com/aws/aws-cdk/issues/26612#issuecomment-1664176179
