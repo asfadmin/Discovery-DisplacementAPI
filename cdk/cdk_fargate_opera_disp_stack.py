@@ -48,7 +48,7 @@ class CdkFargateOperaDispStack(Stack):
             service_sg = ec2.SecurityGroup(self, "OperaDispServiceSecurityGroup", vpc=vpc)
             service_sg.add_ingress_rule(
                 peer=ec2.Peer.ipv4(vpc.vpc_cidr_block),
-                connection=ec2.Port.tcp(80),
+                connection=ec2.Port.tcp(8080),
             )
 
             fargate_vpc_kwargs = {
@@ -127,17 +127,6 @@ class CdkFargateOperaDispStack(Stack):
             )
         )
 
-        # security_group = ec2.SecurityGroup(
-        #     self, 'OperaDispServiceSecurityGroup', vpc=ecs_vpc_kwargs['vpc']
-        # )
-        # security_group.add_ingress_rule(
-        #     peer=ec2.Peer.ipv4(ecs_vpc_kwargs['vpc'].vpc_cidr_block),
-        #     connection=ec2.Port.tcp(8080),
-        #     description='Allow http from Opera Disp API Load Balancer',
-        # )
-
-
-
         # cluster = ecs.Cluster(self, 'OperaDispFargateCluster', vpc=ecs_vpc_kwargs['vpc'])
 
         fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
@@ -146,8 +135,7 @@ class CdkFargateOperaDispStack(Stack):
             task_definition=task_definition,
             memory_limit_mib=16384,
             cpu=2048,
-            desired_count=1,
-            max_healthy_percent=100,
+            desired_count=2,
             public_load_balancer=False,
             listener_port=8080,
             **fargate_vpc_kwargs,
