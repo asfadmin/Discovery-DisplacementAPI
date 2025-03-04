@@ -103,9 +103,8 @@ def frame_intersection(wkt_event: GetFramesModel):
     gdf = gpd.read_file(frame_path, engine='pyogrio')
     frames: gpd.GeoDataFrame = gdf[gdf['frame_id'].isin([int(p) for p in overlapping_frames])] # type: ignore
     intersection = frames.intersection(geometry)
-    output = [(_pad_frame_str(frame_id), geom.wkt) for frame_id, geom in zip(gdf.iloc[intersection.index]['frame_id'], intersection)]
     return JSONResponse(
-        output,
+        {_pad_frame_str(frame_id): geom.wkt for frame_id, geom in zip(gdf.iloc[intersection.index]['frame_id'], intersection)},
         headers=DEFAULT_HEADERS,
     )
 
@@ -148,7 +147,7 @@ def _get_available_file_stores_for_wkt(bucket: str, wkt: str, polarization: str,
 
     s3 = s3fs.S3FileSystem(anon=False)
     
-    available_zarr_stores = []
+    available_zarr_stores = []  
     for store in zarr_stores:
         try:
             if s3.exists(store):
