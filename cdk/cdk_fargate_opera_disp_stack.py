@@ -185,6 +185,7 @@ class CdkFargateOperaDispStack(Stack):
             'DispAPIHttpVPCLink',
             vpc_link_name='V2 VPC Link',
             vpc=vpc,
+            subnets=subnet_selection,
         )
         # vpc_integration = apigatewayV2.HttpIntegration(
         #     self,
