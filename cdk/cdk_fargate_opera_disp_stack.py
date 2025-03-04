@@ -13,6 +13,7 @@ from aws_cdk import (
     aws_ecr_assets as ecr_assets,
     CfnOutput,
     CfnResource,
+    aws_apigatewayv2_integrations,
 )
 from constructs import Construct
 
@@ -172,34 +173,69 @@ class CdkFargateOperaDispStack(Stack):
             ),
         )
 
-        http_vpc_link = apigatewayV2.CfnVpcLink(
+        # http_vpc_link = apigatewayV2.CfnVpcLink(
+        #     self,
+        #     'DispAPIHTTPLink',
+        #     name='V2 VPC Link',
+        #     subnet_ids=vpc_link_kwargs['subnet_ids']
+        # )
+
+        http_vpc_link = apigatewayV2.VpcLink(
             self,
-            'DispAPIHTTPLink',
-            name='V2 VPC Link',
-            subnet_ids=vpc_link_kwargs['subnet_ids']
+            'DispAPIHttpVPCLink',
+            vpc_link_name='V2 VPC Link',
+            vpc=vpc,
         )
+        # vpc_integration = apigatewayV2.HttpIntegration(
+        #     self,
+        #     'DispAPIHTTPVPCIntegration',
+        #     http_api=self.dispApi,
+        #     integration_type=apigatewayV2.HttpIntegrationType.AWS_PROXY,
+        #     connection_type=apigatewayV2.HttpConnectionType.VPC_LINK,
+        #     connection_id=http_vpc_link.vpc_link_id,
+        #     method=apigatewayV2.HttpMethod.ANY,
+        #     integration_uri=fargate_service.listener.listener_arn,
+        # )
+
+        # apigatewayV2.HttpRouteIntegration(vpc_integration.id)
+        # vpc_integration = apigatewayV2.CfnIntegration(
+        #     self,
+        #     'DispAPIVPCIntegration',
+        #     description='DISP API VPC Integration',
+        #     integration_type='HTTP_PROXY',
+        #     connection_id=http_vpc_link.ref,
+        #     connection_type='VPC_LINK',
+        #     api_id=self.dispApi.http_api_id,
+        #     integration_method='ANY',
+        #     payload_format_version='1.0',
+        #     integration_uri=fargate_service.listener.listener_arn,  # "http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
+        # )
         
-        vpc_integration = apigatewayV2.CfnIntegration(
-            self,
-            'DispAPIVPCIntegration',
-            description='DISP API VPC Integration',
-            integration_type='HTTP_PROXY',
-            connection_id=http_vpc_link.ref,
-            connection_type='VPC_LINK',
-            api_id=self.dispApi.http_api_id,
-            integration_method='ANY',
-            payload_format_version='1.0',
-            integration_uri=fargate_service.listener.listener_arn,  # "http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
-        )
-        
-        apigatewayV2.CfnRoute(
-            self,
-            'DispAPIRoute',
-            api_id=self.dispApi.http_api_id,
-            route_key='ANY /{proxy+}',
-            target=f'integrations/{vpc_integration.ref}',
+        # self.dispApi.add_routes(
+        #     path='/',
+        #     integration=vpc_integration,
+        # )
+        nlb_route_integration = aws_apigatewayv2_integrations.HttpNlbIntegration(
+            'DispAPIHttpNLBIntegration',
+            listener=fargate_service.listener,
+            vpc_link=http_vpc_link,
         )
 
+        apigatewayV2.HttpRoute(
+            self,
+            'DispAPIHttpRoute',
+            http_api=self.dispApi,
+            route_key=apigatewayV2.HttpRouteKey.with_('/{proxy+}', apigatewayV2.HttpMethod.ANY),
+            integration=nlb_route_integration
+        )
+        # apigatewayV2.CfnRoute(
+        #     self,
+        #     'DispAPIRoute',
+        #     api_id=self.dispApi.http_api_id,
+        #     route_key='ANY /{proxy+}',
+        #     target=f'integrations/{vpc_integration.ref}',
+        # )
+        
         CfnOutput(
             self,
             'dispAPIUrl',
