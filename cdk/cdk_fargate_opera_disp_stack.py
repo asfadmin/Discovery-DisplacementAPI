@@ -221,7 +221,7 @@ class CdkFargateOperaDispStack(Stack):
             vpc_link=http_vpc_link,
         )
         self.dispApi.add_routes(
-            path='/',
+            path='/{proxy+}',
             integration=nlb_route_integration,
         )
         # apigatewayV2.HttpRoute(
