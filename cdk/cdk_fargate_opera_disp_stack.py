@@ -173,6 +173,8 @@ class CdkFargateOperaDispStack(Stack):
             ),
         )
 
+        
+
         # http_vpc_link = apigatewayV2.CfnVpcLink(
         #     self,
         #     'DispAPIHTTPLink',
@@ -212,23 +214,23 @@ class CdkFargateOperaDispStack(Stack):
         #     integration_uri=fargate_service.listener.listener_arn,  # "http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
         # )
         
-        # self.dispApi.add_routes(
-        #     path='/',
-        #     integration=vpc_integration,
-        # )
+
         nlb_route_integration = aws_apigatewayv2_integrations.HttpNlbIntegration(
             'DispAPIHttpNLBIntegration',
             listener=fargate_service.listener,
             vpc_link=http_vpc_link,
         )
-
-        apigatewayV2.HttpRoute(
-            self,
-            'DispAPIHttpRoute',
-            http_api=self.dispApi,
-            route_key=apigatewayV2.HttpRouteKey.with_('/{proxy+}', apigatewayV2.HttpMethod.ANY),
-            integration=nlb_route_integration
+        self.dispApi.add_routes(
+            path='/',
+            integration=nlb_route_integration,
         )
+        # apigatewayV2.HttpRoute(
+        #     self,
+        #     'DispAPIHttpRoute',
+        #     http_api=self.dispApi,
+        #     route_key=apigatewayV2.HttpRouteKey.with_('/{proxy+}', apigatewayV2.HttpMethod.ANY),
+        #     integration=nlb_route_integration,
+        # )
         # apigatewayV2.CfnRoute(
         #     self,
         #     'DispAPIRoute',
