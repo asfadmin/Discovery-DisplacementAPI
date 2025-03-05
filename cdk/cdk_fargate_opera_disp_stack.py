@@ -143,8 +143,6 @@ class CdkFargateOperaDispStack(Stack):
        
         self.nlb = fargate_service.load_balancer
 
-        listener = self.nlb.add_listener('listener', port=80)
-        listener.add_targets('target', port=8080)
         # self.nlb.add_security_group(security_group)
         # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
         # AWS cdk docs not comprehensive on this workflow, example taken from here
@@ -174,7 +172,7 @@ class CdkFargateOperaDispStack(Stack):
             ),
             default_integration=aws_apigatewayv2_integrations.HttpNlbIntegration(
             'DispAPIHttpNLBIntegration',
-            listener=listener,
+            listener=fargate_service.listener,
             vpc_link=http_vpc_link,
         )
         )
