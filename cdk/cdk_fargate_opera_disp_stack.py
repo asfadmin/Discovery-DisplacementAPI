@@ -48,7 +48,7 @@ class CdkFargateOperaDispStack(Stack):
             service_sg = ec2.SecurityGroup(self, "OperaDispServiceSecurityGroup", vpc=vpc)
             service_sg.add_ingress_rule(
                 peer=ec2.Peer.ipv4(vpc.vpc_cidr_block),
-                connection=ec2.Port.tcp(8080),
+                connection=ec2.Port.tcp(80),
             )
 
             fargate_vpc_kwargs = {
@@ -142,15 +142,27 @@ class CdkFargateOperaDispStack(Stack):
         )
        
         self.nlb = fargate_service.load_balancer
-        self.nlb.add_security_group(security_group)
+
+        listener = self.nlb.add_listener('listener', port=80)
+        listener.add_targets('target', port=8080)
+        # self.nlb.add_security_group(security_group)
         # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
         # AWS cdk docs not comprehensive on this workflow, example taken from here
         # https://github.com/aws/aws-cdk/issues/26612#issuecomment-1664176179
+
+
+        # http_vpc_link = apigatewayV2.VpcLink(
+        #     self,
+        #     'DispAPIHttpVPCLink',
+        #     vpc_link_name='V2 VPC Link',
+        #     vpc=vpc,
+        #     subnets=subnet_selection,
+        # )
         self.dispApi = apigatewayV2.HttpApi(
             self,
             'DispServiceFargateApi',
             api_name='DispServiceFargateApi',
-            create_default_stage=True,
+            description="Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service",
             cors_preflight=apigatewayV2.CorsPreflightOptions(
                 allow_origins=['*'],
                 allow_methods=[
@@ -160,6 +172,11 @@ class CdkFargateOperaDispStack(Stack):
                     apigatewayV2.CorsHttpMethod.OPTIONS,
                 ],
             ),
+            default_integration=aws_apigatewayv2_integrations.HttpNlbIntegration(
+            'DispAPIHttpNLBIntegration',
+            listener=listener,
+            # vpc_link=http_vpc_link,
+        )
         )
 
         
@@ -171,13 +188,6 @@ class CdkFargateOperaDispStack(Stack):
         #     subnet_ids=vpc_link_kwargs['subnet_ids']
         # )
 
-        http_vpc_link = apigatewayV2.VpcLink(
-            self,
-            'DispAPIHttpVPCLink',
-            vpc_link_name='V2 VPC Link',
-            vpc=vpc,
-            subnets=subnet_selection,
-        )
         # vpc_integration = apigatewayV2.HttpIntegration(
         #     self,
         #     'DispAPIHTTPVPCIntegration',
@@ -204,15 +214,10 @@ class CdkFargateOperaDispStack(Stack):
         # )
         
 
-        nlb_route_integration = aws_apigatewayv2_integrations.HttpNlbIntegration(
-            'DispAPIHttpNLBIntegration',
-            listener=fargate_service.listener,
-            vpc_link=http_vpc_link,
-        )
-        self.dispApi.add_routes(
-            path='/{proxy+}',
-            integration=nlb_route_integration,
-        )
+        # self.dispApi.add_routes(
+        #     path='/{proxy+}',
+        #     integration=nlb_route_integration,
+        # )
         # apigatewayV2.HttpRoute(
         #     self,
         #     'DispAPIHttpRoute',
