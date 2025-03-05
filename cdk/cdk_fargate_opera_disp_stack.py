@@ -151,13 +151,13 @@ class CdkFargateOperaDispStack(Stack):
         # https://github.com/aws/aws-cdk/issues/26612#issuecomment-1664176179
 
 
-        # http_vpc_link = apigatewayV2.VpcLink(
-        #     self,
-        #     'DispAPIHttpVPCLink',
-        #     vpc_link_name='V2 VPC Link',
-        #     vpc=vpc,
-        #     subnets=subnet_selection,
-        # )
+        http_vpc_link = apigatewayV2.VpcLink(
+            self,
+            'DispAPIHttpVPCLink',
+            vpc_link_name='V2 VPC Link',
+            vpc=vpc,
+            subnets=subnet_selection,
+        )
         self.dispApi = apigatewayV2.HttpApi(
             self,
             'DispServiceFargateApi',
@@ -175,7 +175,7 @@ class CdkFargateOperaDispStack(Stack):
             default_integration=aws_apigatewayv2_integrations.HttpNlbIntegration(
             'DispAPIHttpNLBIntegration',
             listener=listener,
-            # vpc_link=http_vpc_link,
+            vpc_link=http_vpc_link,
         )
         )
 
