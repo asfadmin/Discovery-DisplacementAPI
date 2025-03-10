@@ -148,7 +148,7 @@ class CdkFargateOperaDispStack(Stack):
         # AWS cdk docs not comprehensive on this workflow, example taken from here
         # https://github.com/aws/aws-cdk/issues/26612#issuecomment-1664176179
 
-
+        # ec2.InterfaceVpcEndpoint.fromInterfaceVpcEndpointAttributes()
         http_vpc_link = apigatewayV2.VpcLink(
             self,
             'DispAPIHttpVPCLink',
@@ -156,26 +156,42 @@ class CdkFargateOperaDispStack(Stack):
             vpc=vpc,
             subnets=subnet_selection,
         )
+#         apigatewayV2.CfnApi(
+#             
+        # )
+        nlb_integration = aws_apigatewayv2_integrations.HttpNlbIntegration(
+            'DispAPIHttpNLBIntegration',
+            listener=fargate_service.listener,
+            vpc_link=http_vpc_link,
+        )
         self.dispApi = apigatewayV2.HttpApi(
             self,
             'DispServiceFargateApi',
             api_name='DispServiceFargateApi',
             description="Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service",
+            create_default_stage=True,
             cors_preflight=apigatewayV2.CorsPreflightOptions(
                 allow_origins=['*'],
                 allow_methods=[
-                    apigatewayV2.CorsHttpMethod.POST,
-                    apigatewayV2.CorsHttpMethod.GET,
-                    apigatewayV2.CorsHttpMethod.HEAD,
-                    apigatewayV2.CorsHttpMethod.OPTIONS,
+                    apigatewayV2.CorsHttpMethod.ANY
                 ],
             ),
-            default_integration=aws_apigatewayv2_integrations.HttpNlbIntegration(
-            'DispAPIHttpNLBIntegration',
-            listener=fargate_service.listener,
-            vpc_link=http_vpc_link,
+            default_integration=nlb_integration
         )
+
+        # Add a dummy route just to verify
+        self.dispApi.add_routes(
+            path='/{proxy+}',
+            methods=[apigatewayV2.HttpMethod.ANY],
+            integration=nlb_integration,
         )
+
+        self.dispApi.add_stage(
+            'DispApiTestStage',
+            stage_name='test',
+            auto_deploy=True,
+        )
+
 
         
 
