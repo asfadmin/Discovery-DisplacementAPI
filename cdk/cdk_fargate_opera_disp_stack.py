@@ -14,6 +14,7 @@ from aws_cdk import (
     CfnOutput,
     CfnResource,
     aws_apigatewayv2_integrations,
+    aws_apigatewayv2_authorizers,
 )
 from constructs import Construct
 
@@ -159,20 +160,24 @@ class CdkFargateOperaDispStack(Stack):
 #         apigatewayV2.CfnApi(
 #             
         # )
-        proxy_integration = aws_apigatewayv2_integrations.HttpUrlIntegration('DispServiceFargateLoadBalancerProxy', f'http://{self.nlb.load_balancer_dns_name}')
         self.dispApi = apigatewayV2.HttpApi(
             self,
             'DispServiceFargateApi',
             api_name='DispServiceFargateApi',
             description="Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service",
-            create_default_stage=True,
-            cors_preflight=apigatewayV2.CorsPreflightOptions(
-                allow_origins=['*'],
-                allow_methods=[
-                    apigatewayV2.CorsHttpMethod.ANY
-                ],
-            ),
-            default_integration=proxy_integration,
+            # create_default_stage=True,
+            # cors_preflight=apigatewayV2.CorsPreflightOptions(
+            #     allow_origins=['*'],
+            #     allow_methods=[
+            #         apigatewayV2.CorsHttpMethod.ANY
+            #     ],
+            # ),
+        )
+
+        proxy_integration = aws_apigatewayv2_integrations.HttpUrlIntegration('DispServiceFargateLoadBalancerProxy', f'http://{self.nlb.load_balancer_dns_name}:8080')
+        self.dispApi.add_routes(
+            path='/',
+            integration=proxy_integration,
         )
 
         
