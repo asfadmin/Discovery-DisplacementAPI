@@ -149,17 +149,17 @@ class CdkFargateOperaDispStack(Stack):
         # https://github.com/aws/aws-cdk/issues/26612#issuecomment-1664176179
 
         # ec2.InterfaceVpcEndpoint.fromInterfaceVpcEndpointAttributes()
-        http_vpc_link = apigatewayV2.VpcLink(
-            self,
-            'DispAPIHttpVPCLink',
-            vpc_link_name='V2 VPC Link',
-            vpc=vpc,
-            subnets=subnet_selection,
-        )
+        # http_vpc_link = apigatewayV2.VpcLink(
+        #     self,
+        #     'DispAPIHttpVPCLink',
+        #     vpc_link_name='V2 VPC Link',
+        #     vpc=vpc,
+        #     subnets=subnet_selection,
+        # )
 #         apigatewayV2.CfnApi(
 #             
         # )
-
+        proxy_integration = aws_apigatewayv2_integrations.HttpUrlIntegration('DispServiceFargateLoadBalancerProxy', f'http://{self.nlb.load_balancer_dns_name}')
         self.dispApi = apigatewayV2.HttpApi(
             self,
             'DispServiceFargateApi',
@@ -172,11 +172,7 @@ class CdkFargateOperaDispStack(Stack):
                     apigatewayV2.CorsHttpMethod.ANY
                 ],
             ),
-            default_integration=aws_apigatewayv2_integrations.HttpNlbIntegration(
-            'DispAPIHttpNLBIntegration',
-            listener=fargate_service.listener,
-            vpc_link=http_vpc_link,
-        )
+            default_integration=proxy_integration,
         )
 
         
@@ -187,11 +183,11 @@ class CdkFargateOperaDispStack(Stack):
         #     integration=nlb_integration,
         # )
 
-        self.dispApi.add_stage(
-            'DispApiTestStage',
-            stage_name='test',
-            auto_deploy=True,
-        )
+        # self.dispApi.add_stage(
+        #     'DispApiTestStage',
+        #     stage_name='test',
+        #     auto_deploy=True,
+        # )
 
 
         
