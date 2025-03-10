@@ -172,6 +172,10 @@ class CdkFargateOperaDispStack(Stack):
             #         apigatewayV2.CorsHttpMethod.ANY
             #     ],
             # ),
+            endpoint_configuration=aws_apigateway.EndpointConfiguration(
+                    # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
+                    types=[aws_apigateway.EndpointType.PRIVATE]
+            ),
             default_cors_preflight_options=aws_apigateway.CorsOptions(
                 allow_origins=aws_apigateway.Cors.ALL_ORIGINS,
                 allow_methods=aws_apigateway.Cors.ALL_METHODS,
