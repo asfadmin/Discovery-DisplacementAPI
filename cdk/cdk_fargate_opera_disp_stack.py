@@ -162,8 +162,8 @@ class CdkFargateOperaDispStack(Stack):
         # )
         self.dispApi = apigatewayV2.HttpApi(
             self,
-            'DispServiceFargateApi',
-            api_name='DispServiceFargateApi',
+            'DispAPIV2',
+            # api_name='DispServiceFargateApi',
             description="Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service",
             # create_default_stage=True,
             # cors_preflight=apigatewayV2.CorsPreflightOptions(
