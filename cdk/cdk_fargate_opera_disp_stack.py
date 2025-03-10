@@ -159,11 +159,7 @@ class CdkFargateOperaDispStack(Stack):
 #         apigatewayV2.CfnApi(
 #             
         # )
-        nlb_integration = aws_apigatewayv2_integrations.HttpNlbIntegration(
-            'DispAPIHttpNLBIntegration',
-            listener=fargate_service.listener,
-            vpc_link=http_vpc_link,
-        )
+
         self.dispApi = apigatewayV2.HttpApi(
             self,
             'DispServiceFargateApi',
@@ -176,15 +172,20 @@ class CdkFargateOperaDispStack(Stack):
                     apigatewayV2.CorsHttpMethod.ANY
                 ],
             ),
-            default_integration=nlb_integration
+            default_integration=aws_apigatewayv2_integrations.HttpNlbIntegration(
+            'DispAPIHttpNLBIntegration',
+            listener=fargate_service.listener,
+            vpc_link=http_vpc_link,
+        )
         )
 
+        
         # Add a dummy route just to verify
-        self.dispApi.add_routes(
-            path='/{proxy+}',
-            methods=[apigatewayV2.HttpMethod.ANY],
-            integration=nlb_integration,
-        )
+        # self.dispApi.add_routes(
+        #     path='/{proxy+}',
+        #     methods=[apigatewayV2.HttpMethod.ANY],
+        #     integration=nlb_integration,
+        # )
 
         self.dispApi.add_stage(
             'DispApiTestStage',
