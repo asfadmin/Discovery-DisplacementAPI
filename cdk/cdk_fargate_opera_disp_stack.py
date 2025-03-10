@@ -176,10 +176,10 @@ class CdkFargateOperaDispStack(Stack):
 
         proxy_integration = aws_apigatewayv2_integrations.HttpUrlIntegration('DispServiceFargateLoadBalancerProxy', f'http://{self.nlb.load_balancer_dns_name}:8080')
         self.dispApi.add_routes(
-            path='/',
+            path='/{proxy+}',
             integration=proxy_integration,
         )
-
+        
         
         # Add a dummy route just to verify
         # self.dispApi.add_routes(
