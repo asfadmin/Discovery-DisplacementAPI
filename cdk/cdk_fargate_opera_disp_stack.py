@@ -182,12 +182,20 @@ class CdkFargateOperaDispStack(Stack):
             ),
         )
 
-        proxy_integration = aws_apigateway.HttpIntegration(
-            url=f'http://{self.nlb.load_balancer_dns_name}:8080'
+        link = aws_apigateway.VpcLink(self, 'link',
+            targets=[self.nlb],
+        )
+        integration = aws_apigateway.Integration(
+        type = aws_apigateway.IntegrationType.HTTP_PROXY,
+        integration_http_method= 'ANY',
+        options = aws_apigateway.IntegrationOptions(
+            connection_type= aws_apigateway.ConnectionType.VPC_LINK,
+            vpc_link= link,
+        )
         )
         
         self.dispApi.root.add_proxy(
-            default_integration=proxy_integration,
+            default_integration=integration,
 
         )
         # self.dispApi.add_routes(
