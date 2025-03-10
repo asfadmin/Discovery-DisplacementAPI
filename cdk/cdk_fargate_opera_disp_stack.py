@@ -15,9 +15,9 @@ from aws_cdk import (
     CfnResource,
     aws_apigatewayv2_integrations,
     aws_apigatewayv2_authorizers,
+    aws_apigateway,
 )
 from constructs import Construct
-
 
 
 class CdkFargateOperaDispStack(Stack):
@@ -46,7 +46,7 @@ class CdkFargateOperaDispStack(Stack):
             security_group = ec2.SecurityGroup.from_security_group_id(
                 self, 'EDCSecurityGroup', security_group
             )
-            service_sg = ec2.SecurityGroup(self, "OperaDispServiceSecurityGroup", vpc=vpc)
+            service_sg = ec2.SecurityGroup(self, 'OperaDispServiceSecurityGroup', vpc=vpc)
             service_sg.add_ingress_rule(
                 peer=ec2.Peer.ipv4(vpc.vpc_cidr_block),
                 connection=ec2.Port.tcp(80),
@@ -141,7 +141,7 @@ class CdkFargateOperaDispStack(Stack):
             listener_port=8080,
             **fargate_vpc_kwargs,
         )
-       
+
         self.nlb = fargate_service.load_balancer
 
         # self.nlb.add_security_group(security_group)
@@ -157,14 +157,14 @@ class CdkFargateOperaDispStack(Stack):
         #     vpc=vpc,
         #     subnets=subnet_selection,
         # )
-#         apigatewayV2.CfnApi(
-#             
+        #         apigatewayV2.CfnApi(
+        #
         # )
-        self.dispApi = apigatewayV2.HttpApi(
+        self.dispApi = aws_apigateway.RestApi(
             self,
-            'DispAPIV2',
+            'DispAPIFargate',
             # api_name='DispServiceFargateApi',
-            description="Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service",
+            description='Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service',
             # create_default_stage=True,
             # cors_preflight=apigatewayV2.CorsPreflightOptions(
             #     allow_origins=['*'],
@@ -172,15 +172,25 @@ class CdkFargateOperaDispStack(Stack):
             #         apigatewayV2.CorsHttpMethod.ANY
             #     ],
             # ),
+            default_cors_preflight_options=aws_apigateway.CorsOptions(
+                allow_origins=aws_apigateway.Cors.ALL_ORIGINS,
+                allow_methods=aws_apigateway.Cors.ALL_METHODS,
+            ),
         )
 
-        proxy_integration = aws_apigatewayv2_integrations.HttpUrlIntegration('DispServiceFargateLoadBalancerProxy', f'http://{self.nlb.load_balancer_dns_name}:8080')
-        self.dispApi.add_routes(
-            path='/{proxy+}',
-            integration=proxy_integration,
+        proxy_integration = aws_apigateway.HttpIntegration(
+            url=f'http://{self.nlb.load_balancer_dns_name}:8080'
         )
         
-        
+        self.dispApi.root.add_proxy(
+            default_integration=proxy_integration,
+
+        )
+        # self.dispApi.add_routes(
+        #     path='/{proxy+}',
+        #     integration=proxy_integration,
+        # )
+
         # Add a dummy route just to verify
         # self.dispApi.add_routes(
         #     path='/{proxy+}',
@@ -193,9 +203,6 @@ class CdkFargateOperaDispStack(Stack):
         #     stage_name='test',
         #     auto_deploy=True,
         # )
-
-
-        
 
         # http_vpc_link = apigatewayV2.CfnVpcLink(
         #     self,
@@ -228,7 +235,6 @@ class CdkFargateOperaDispStack(Stack):
         #     payload_format_version='1.0',
         #     integration_uri=fargate_service.listener.listener_arn,  # "http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
         # )
-        
 
         # self.dispApi.add_routes(
         #     path='/{proxy+}',
@@ -248,7 +254,7 @@ class CdkFargateOperaDispStack(Stack):
         #     route_key='ANY /{proxy+}',
         #     target=f'integrations/{vpc_integration.ref}',
         # )
-        
+
         CfnOutput(
             self,
             'dispAPIUrl',
