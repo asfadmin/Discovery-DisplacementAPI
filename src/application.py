@@ -19,6 +19,8 @@ import geopandas as gpd
 
 from . import log_router
 from shapely import wkt as shapely_wkt
+from shapely import convex_hull
+from shapely.geometry.base import BaseGeometry
 
 router = APIRouter(route_class=log_router.LoggingRoute)
 app = FastAPI()
@@ -104,9 +106,16 @@ def frame_intersection(wkt_event: GetFramesModel):
     frames: gpd.GeoDataFrame = gdf[gdf['frame_id'].isin([int(p) for p in overlapping_frames])] # type: ignore
     intersection = frames.intersection(geometry)
     return JSONResponse(
-        {_pad_frame_str(frame_id): geom.wkt for frame_id, geom in zip(gdf.iloc[intersection.index]['frame_id'], intersection)},
+        {_pad_frame_str(frame_id): _simplify_multipolygons(geom).wkt for frame_id, geom in zip(gdf.iloc[intersection.index]['frame_id'], intersection)},
         headers=DEFAULT_HEADERS,
     )
+
+def _simplify_multipolygons(geometry: BaseGeometry) -> BaseGeometry:
+    """In case polygon intersects different sections of frame at once and get multi-polygon (swath corners for example), perform convex hull instead"""
+    if geometry.geom_type == 'MultiPolygon':
+        geometry = convex_hull(geometry)
+    
+    return geometry
 
 def _pad_frame_str(frame: str):
     frame_str = str(frame)
