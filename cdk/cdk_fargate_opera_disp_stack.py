@@ -130,20 +130,20 @@ class CdkFargateOperaDispStack(Stack):
 
         # cluster = ecs.Cluster(self, 'OperaDispFargateCluster', vpc=ecs_vpc_kwargs['vpc'])
 
-        fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
+        fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
             self,
-            'OperaDispFargateService',
+            'OperaDispFargateALBService',
             task_definition=task_definition,
             memory_limit_mib=16384,
             cpu=2048,
             desired_count=2,
             public_load_balancer=False,
-            listener_port=8080,
+            # listener_port=8080,
             **fargate_vpc_kwargs,
         )
 
-        self.nlb = fargate_service.load_balancer
-
+        self.alb = fargate_service.load_balancer
+        
         # self.nlb.add_security_group(security_group)
         # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
         # AWS cdk docs not comprehensive on this workflow, example taken from here
@@ -160,115 +160,48 @@ class CdkFargateOperaDispStack(Stack):
         #         apigatewayV2.CfnApi(
         #
         # )
-        self.dispApi = aws_apigateway.RestApi(
-            self,
-            'DispAPIFargate',
-            # api_name='DispServiceFargateApi',
-            description='Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service',
-            # create_default_stage=True,
-            # cors_preflight=apigatewayV2.CorsPreflightOptions(
-            #     allow_origins=['*'],
-            #     allow_methods=[
-            #         apigatewayV2.CorsHttpMethod.ANY
-            #     ],
-            # ),
-            endpoint_configuration=aws_apigateway.EndpointConfiguration(
-                    # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
-                    types=[aws_apigateway.EndpointType.PRIVATE]
-            ),
-            default_cors_preflight_options=aws_apigateway.CorsOptions(
-                allow_origins=aws_apigateway.Cors.ALL_ORIGINS,
-                allow_methods=aws_apigateway.Cors.ALL_METHODS,
-            ),
-        )
+        # self.dispApi = aws_apigateway.RestApi(
+        #     self,
+        #     'DispAPIFargate',
+        #     # api_name='DispServiceFargateApi',
+        #     description='Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service',
+        #     # create_default_stage=True,
+        #     # cors_preflight=apigatewayV2.CorsPreflightOptions(
+        #     #     allow_origins=['*'],
+        #     #     allow_methods=[
+        #     #         apigatewayV2.CorsHttpMethod.ANY
+        #     #     ],
+        #     # ),
+        #     endpoint_configuration=aws_apigateway.EndpointConfiguration(
+        #             # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
+        #             types=[aws_apigateway.EndpointType.PRIVATE]
+        #     ),
+        #     default_cors_preflight_options=aws_apigateway.CorsOptions(
+        #         allow_origins=aws_apigateway.Cors.ALL_ORIGINS,
+        #         allow_methods=aws_apigateway.Cors.ALL_METHODS,
+        #     ),
+        # )
 
-        link = aws_apigateway.VpcLink(self, 'link',
-            targets=[self.nlb],
-        )
-        integration = aws_apigateway.Integration(
-        type = aws_apigateway.IntegrationType.HTTP_PROXY,
-        integration_http_method= 'ANY',
-        options = aws_apigateway.IntegrationOptions(
-            connection_type= aws_apigateway.ConnectionType.VPC_LINK,
-            vpc_link= link,
-        )
-        )
+        # link = aws_apigateway.VpcLink(self, 'link',
+        #     targets=[self.nlb],
+        # )
+        # aws_apigateway.VpcLink.from_vpc_link_id(self, 'awesome-vpc-link', 'us-east-1_oiuR12Abd');
+        # integration = aws_apigateway.Integration(
+        # type = aws_apigateway.IntegrationType.HTTP_PROXY,
+        # integration_http_method= 'ANY',
+        # options = aws_apigateway.IntegrationOptions(
+        #     connection_type= aws_apigateway.ConnectionType.VPC_LINK,
+        #     vpc_link= link,
+        # )
+        # )
         
-        self.dispApi.root.add_proxy(
-            default_integration=integration,
+        # self.dispApi.root.add_proxy(
+        #     default_integration=integration,
 
-        )
-        # self.dispApi.add_routes(
-        #     path='/{proxy+}',
-        #     integration=proxy_integration,
-        # )
-
-        # Add a dummy route just to verify
-        # self.dispApi.add_routes(
-        #     path='/{proxy+}',
-        #     methods=[apigatewayV2.HttpMethod.ANY],
-        #     integration=nlb_integration,
-        # )
-
-        # self.dispApi.add_stage(
-        #     'DispApiTestStage',
-        #     stage_name='test',
-        #     auto_deploy=True,
-        # )
-
-        # http_vpc_link = apigatewayV2.CfnVpcLink(
-        #     self,
-        #     'DispAPIHTTPLink',
-        #     name='V2 VPC Link',
-        #     subnet_ids=vpc_link_kwargs['subnet_ids']
-        # )
-
-        # vpc_integration = apigatewayV2.HttpIntegration(
-        #     self,
-        #     'DispAPIHTTPVPCIntegration',
-        #     http_api=self.dispApi,
-        #     integration_type=apigatewayV2.HttpIntegrationType.AWS_PROXY,
-        #     connection_type=apigatewayV2.HttpConnectionType.VPC_LINK,
-        #     connection_id=http_vpc_link.vpc_link_id,
-        #     method=apigatewayV2.HttpMethod.ANY,
-        #     integration_uri=fargate_service.listener.listener_arn,
-        # )
-
-        # apigatewayV2.HttpRouteIntegration(vpc_integration.id)
-        # vpc_integration = apigatewayV2.CfnIntegration(
-        #     self,
-        #     'DispAPIVPCIntegration',
-        #     description='DISP API VPC Integration',
-        #     integration_type='HTTP_PROXY',
-        #     connection_id=http_vpc_link.ref,
-        #     connection_type='VPC_LINK',
-        #     api_id=self.dispApi.http_api_id,
-        #     integration_method='ANY',
-        #     payload_format_version='1.0',
-        #     integration_uri=fargate_service.listener.listener_arn,  # "http://" + fargate_service.load_balancer.load_balancer_dns_name + "/{proxy}",
-        # )
-
-        # self.dispApi.add_routes(
-        #     path='/{proxy+}',
-        #     integration=nlb_route_integration,
-        # )
-        # apigatewayV2.HttpRoute(
-        #     self,
-        #     'DispAPIHttpRoute',
-        #     http_api=self.dispApi,
-        #     route_key=apigatewayV2.HttpRouteKey.with_('/{proxy+}', apigatewayV2.HttpMethod.ANY),
-        #     integration=nlb_route_integration,
-        # )
-        # apigatewayV2.CfnRoute(
-        #     self,
-        #     'DispAPIRoute',
-        #     api_id=self.dispApi.http_api_id,
-        #     route_key='ANY /{proxy+}',
-        #     target=f'integrations/{vpc_integration.ref}',
         # )
 
         CfnOutput(
             self,
             'dispAPIUrl',
-            value=self.dispApi.url,  # type: ignore
+            value=self.alb.load_balancer_dns_name,  # type: ignore
         )
