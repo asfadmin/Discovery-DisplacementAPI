@@ -55,6 +55,10 @@ def get_timeseries(series: TimeSeriesModel):
         raise HTTPException(
             400, detail=f'Failed to load provided wkt string. Original Error: {exc}'
         )
+    if geometry.geom_type not in ['Polygon', 'Point']:
+        raise HTTPException(
+            400, detail=f'Failed to load provided wkt. Must be "POLYGON" or "POINT", got {geometry.geom_type.upper()}'
+        )
 
     api_logger.debug(f'wkt loaded: {geometry.wkt}')
 
