@@ -173,7 +173,7 @@ def _fix_rolling_reference(data: pandas.DataFrame) -> pandas.DataFrame:
 
     # grab the first scene, use to offset first timestep to 0
     prev_granule = data.iloc[0]
-    correction = -prev_granule.short_wavelength_displacement
+    correction = 0
 
     start = perf_counter()
     for _, scene in data.iterrows():
