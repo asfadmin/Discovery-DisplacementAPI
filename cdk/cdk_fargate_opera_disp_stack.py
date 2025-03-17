@@ -130,7 +130,7 @@ class CdkFargateOperaDispStack(Stack):
 
         # cluster = ecs.Cluster(self, 'OperaDispFargateCluster', vpc=ecs_vpc_kwargs['vpc'])
 
-        fargate_service = ecs_patterns.ApplicationLoadBalancedFargateService(
+        fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
             self,
             'OperaDispFargateALBService',
             task_definition=task_definition,
@@ -142,7 +142,7 @@ class CdkFargateOperaDispStack(Stack):
             **fargate_vpc_kwargs,
         )
 
-        self.alb = fargate_service.load_balancer
+        self.nlb = fargate_service.load_balancer
         
         # self.nlb.add_security_group(security_group)
         # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
@@ -203,5 +203,5 @@ class CdkFargateOperaDispStack(Stack):
         CfnOutput(
             self,
             'dispAPIUrl',
-            value=self.alb.load_balancer_dns_name,  # type: ignore
+            value=self.nlb.load_balancer_dns_name,  # type: ignore
         )
