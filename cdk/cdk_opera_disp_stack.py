@@ -79,6 +79,8 @@ class CdkOperaDispStack(Stack):
                 resources=[
                     'arn:aws:s3:::asf-cumulus-test-opera-products/*',
                     'arn:aws:s3:::asf-cumulus-test-opera-products/',
+                    'arn:aws:s3:::asf-cumulus-prod-opera-products/*',
+                    'arn:aws:s3:::asf-cumulus-prod-opera-products/',
                 ],
             )
         )
