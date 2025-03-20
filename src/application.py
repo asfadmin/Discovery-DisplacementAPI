@@ -121,15 +121,6 @@ def _simplify_multipolygons(geometry: BaseGeometry) -> BaseGeometry:
     
     return geometry
 
-def _pad_frame_str(frame: str):
-    frame_str = str(frame)
-
-    # append leading zeros
-    if len(frame_str) < 5:
-        frame_str = ('0'*(5-len(frame_str))) + frame_str
-
-    return frame_str
-
 def _get_file_store_for_wkt(bucket: str, frame_id: str, polarization: str):
     return f's3://{bucket}/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_short_wavelength_displacement.zarr.json.gz'
 
@@ -147,9 +138,9 @@ def _get_zarr_store_uri(bucket: str, wkt: str, frame_id: str | None, polarizatio
             400, f'No data found for the given area of interest {wkt}'
         )
     else:
-        return _get_available_file_stores_for_wkt(bucket=bucket, wkt=wkt, polarization=polarization, flight_direction=flight_direction)[0]
+        return _get_westmost_file_store_for_wkt(bucket=bucket, wkt=wkt, polarization=polarization, flight_direction=flight_direction)
 
-def _get_available_file_stores_for_wkt(bucket: str, wkt: str, polarization: str, flight_direction: str):
+def _get_westmost_file_store_for_wkt(bucket: str, wkt: str, polarization: str, flight_direction: str):
     # example:
     # s3://asf-cumulus-test-opera-products/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F44328_VV_V1/OPERA_L3_DISP-S1_IW_F44328_VV_short_wavelength_displacement.zarr.json.gz
     
@@ -173,7 +164,7 @@ def _get_available_file_stores_for_wkt(bucket: str, wkt: str, polarization: str,
             400, f'No data found for the given area of interest {wkt}'
         )
 
-    return available_zarr_stores
+    return available_zarr_stores[0]
 
 
 def _get_frames_for_wkt(wkt: str, flight_direction: str) -> list[str]:
@@ -181,6 +172,9 @@ def _get_frames_for_wkt(wkt: str, flight_direction: str) -> list[str]:
     geometry = shapely_wkt.loads(wkt)
     gdf = gpd.read_file(frame_path, engine='pyogrio')
     result = gdf[gdf.orbit_direction==flight_direction][gdf.intersects(geometry)]
+    result['west_most_point'] = result.geometry.bounds.minx
+    result.sort_values(by='west_most_point', ascending=flight_direction == 'ASCENDING')
+
     frame_ids = set(result['frame_id'])
 
     if len(frame_ids) == 0:
@@ -189,16 +183,13 @@ def _get_frames_for_wkt(wkt: str, flight_direction: str) -> list[str]:
             detail=f'No OPERA-S1 burst frame ids were found over the given aoi: {wkt}',
         )
 
-    frame_strings = []
-    
-    for frame in frame_ids:
-        frame_str = str(frame)
+    return [_pad_frame_str(frame) for frame in frame_ids]
 
-        # append leading zeros
-        if len(frame_str) < 5:
-            frame_str = ('0'*(5-len(frame_str))) + frame_str
+def _pad_frame_str(frame: int):
+    frame_str = str(frame)
 
-        frame_strings.append(str(frame_str))
-    
-    return sorted(frame_strings)
-    # return JSONResponse({'frame_ids': sorted(list(frame_ids)), 'wkt': wkt}, headers=DEFAULT_HEADERS)
+    # append leading zeros
+    if len(frame_str) < 5:
+        frame_str = ('0'*(5-len(frame_str))) + frame_str
+
+    return frame_str
