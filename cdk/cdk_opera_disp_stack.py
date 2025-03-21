@@ -63,7 +63,7 @@ class CdkOperaDispStack(Stack):
                 throughput_mode=efs.ThroughputMode.BURSTING,
                 lifecycle_policy=efs.LifecyclePolicy.AFTER_1_DAY,  # files are not transitioned to infrequent access (IA) storage by default
                 out_of_infrequent_access_policy=efs.OutOfInfrequentAccessPolicy.AFTER_1_ACCESS,  # files are not transitioned back from (infrequent access) IA to primary storage by default
-                transition_to_archive_policy=efs.LifecyclePolicy.AFTER_7_DAYS,  # files are not transitioned to Archive by default
+                # transition_to_archive_policy=efs.LifecyclePolicy.AFTER_7_DAYS,  # files are not transitioned to Archive by default
                 replication_overwrite_protection=efs.ReplicationOverwriteProtection.ENABLED,
                 removal_policy=RemovalPolicy.DESTROY,
             )
