@@ -55,27 +55,27 @@ class CdkOperaDispStack(Stack):
                 ),
             }
 
-            file_system = efs.FileSystem(
-                self,
-                "OPERADispAPIEFS",
-                vpc=vpc,
-                performance_mode=efs.PerformanceMode.MAX_IO,
-                throughput_mode=efs.ThroughputMode.BURSTING,
-                lifecycle_policy=efs.LifecyclePolicy.AFTER_1_DAY,  # files are not transitioned to infrequent access (IA) storage by default
-                out_of_infrequent_access_policy=efs.OutOfInfrequentAccessPolicy.AFTER_1_ACCESS,  # files are not transitioned back from (infrequent access) IA to primary storage by default
-                # transition_to_archive_policy=efs.LifecyclePolicy.AFTER_7_DAYS,  # files are not transitioned to Archive by default
-                replication_overwrite_protection=efs.ReplicationOverwriteProtection.ENABLED,
-                removal_policy=RemovalPolicy.DESTROY,
-            )
-            self.access_point = file_system.add_access_point(
-                "DispAPIAccessPoint",
-                path="/export/lambda",
-                create_acl=efs.Acl(
-                    owner_uid="1001", owner_gid="1001", permissions="750"
-                ),
-                # enforce the POSIX identity so lambda function will access with this identity
-                posix_user=efs.PosixUser(uid="1001", gid="1001"),
-            )
+            # file_system = efs.FileSystem(
+            #     self,
+            #     "OPERADispAPIEFS",
+            #     vpc=vpc,
+            #     performance_mode=efs.PerformanceMode.MAX_IO,
+            #     throughput_mode=efs.ThroughputMode.BURSTING,
+            #     lifecycle_policy=efs.LifecyclePolicy.AFTER_1_DAY,  # files are not transitioned to infrequent access (IA) storage by default
+            #     out_of_infrequent_access_policy=efs.OutOfInfrequentAccessPolicy.AFTER_1_ACCESS,  # files are not transitioned back from (infrequent access) IA to primary storage by default
+            #     # transition_to_archive_policy=efs.LifecyclePolicy.AFTER_7_DAYS,  # files are not transitioned to Archive by default
+            #     replication_overwrite_protection=efs.ReplicationOverwriteProtection.ENABLED,
+            #     removal_policy=RemovalPolicy.DESTROY,
+            # )
+            # self.access_point = file_system.add_access_point(
+            #     "DispAPIAccessPoint",
+            #     path="/export/lambda",
+            #     create_acl=efs.Acl(
+            #         owner_uid="1001", owner_gid="1001", permissions="750"
+            #     ),
+            #     # enforce the POSIX identity so lambda function will access with this identity
+            #     posix_user=efs.PosixUser(uid="1001", gid="1001"),
+            # )
         
         
 
@@ -90,9 +90,9 @@ class CdkOperaDispStack(Stack):
             function_name='DispServiceDockerAPIFunction',
             timeout=Duration.seconds(60),
             memory_size=10240,
-            filesystem=_lambda.FileSystem.from_efs_access_point(
-                ap=self.access_point, mount_path="/mnt/filesystem"
-            ) if self.access_point else None,
+            # filesystem=_lambda.FileSystem.from_efs_access_point(
+            #     ap=self.access_point, mount_path="/mnt/filesystem"
+            # ) if self.access_point else None,
             **lambda_vpc_kwargs,
         )
 
