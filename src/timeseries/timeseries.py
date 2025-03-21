@@ -36,24 +36,36 @@ def get_timeseries_over_aoi(
     start = perf_counter()
 
     try:
-        fs = SimpleCacheFileSystem(
-            target_protocol='reference',
-            cache_storage=f'/mnt/filesystem/{file_store.split("/")[-1]}',
-            target_options={
-                'target_options': dict(compression='gzip'),
-                'fo': f'{file_store}',
-                'remote_options': {
-                    'anon': False,
-                    'default_fill_cache': True,
-                    'skip_instance_cache': False,
-                    **fsspec_params,
-                },
+        fs = fsspec.filesystem(
+            'reference',
+            fo=file_store,
+            remote_protocol='s3',
+            target_options=dict(compression='gzip'),
+            remote_options={
+                'anon': False,
+                'default_fill_cache': False,
+                'skip_instance_cache': False,
+                **fsspec_params,
             },
-            asynchronous=True,
         )
+        # fs = SimpleCacheFileSystem(
+        #     target_protocol='reference',
+        #     cache_storage=f'/mnt/filesystem/{file_store.split("/")[-1]}',
+        #     target_options={
+        #         'target_options': dict(compression='gzip'),
+        #         'fo': f'{file_store}',
+        #         'remote_options': {
+        #             'anon': False,
+        #             'default_fill_cache': True,
+        #             'skip_instance_cache': False,
+        #             **fsspec_params,
+        #         },
+        #     },
+        #     asynchronous=True,
+        # )
 
     except Exception as exc:
-        api_logger.error(f"Failed to open file. Original Error: {exc}")
+        api_logger.error(f'Failed to open file. Original Error: {exc}')
         raise exc
     api_logger.info(f's3fs filesystem creation: {perf_counter() - start} seconds')
 
@@ -65,12 +77,17 @@ def get_timeseries_over_aoi(
     values = _latest_product_versions(values)
     values = _minimum_version(values)
     post_filter_count = len(values.source_file_name)
-    
-    api_logger.info(f'Filtered {pre_filter_count-post_filter_count} duplicate/old products from stack.')
+
+    api_logger.info(
+        f'Filtered {pre_filter_count - post_filter_count} duplicate/old products from stack.'
+    )
 
     if post_filter_count == 0:
-        raise OutdatedStackException(status_code=502, detail=f'No V1.0+ products found in stack "{file_store.split("/")[-1]}"')
-    
+        raise OutdatedStackException(
+            status_code=502,
+            detail=f'No V1.0+ products found in stack "{file_store.split("/")[-1]}"',
+        )
+
     start = perf_counter()
     _calc_temporal_offsets(values)
     api_logger.info(f'Temporal Offset calc: {perf_counter() - start} seconds')
@@ -83,16 +100,19 @@ def get_timeseries_over_aoi(
     api_logger.info(f'AOI Read Speed: {perf_counter() - start} seconds')
     return _pandas_output(values)
 
+
 def _latest_product_versions(values: xr.Dataset) -> xr.Dataset:
     """Remove duplicate products by their secondary datetime, keeping the latest version"""
     secondary = values['secondary_datetime'].to_series().sort_values()
     latest = secondary.drop_duplicates(keep='last').index.values
     return values.sel(source_file_name=latest)
 
+
 def _minimum_version(values: xr.Dataset) -> xr.Dataset:
     """Only keep products of minimum version `0.9` or above"""
     mask = values.coords['source_file_name'].str.match(r'.*((v1\..)|(v0\.9)).*\.nc?')
     return values.isel(source_file_name=mask)
+
 
 # https://docs.xarray.dev/en/stable/generated/xarray.open_mfdataset.html#xarray.open_mfdataset
 # pass to pre-process
@@ -209,10 +229,9 @@ def _pandas_output(data: xr.Dataset):
     data = data.sortby('secondary_datetime')
     pandas_values = data.to_dataframe()
     pandas_values = _fix_rolling_reference(pandas_values)
-    
+
     pandas_values = pandas_values.reset_index().set_index('source_file_name')
     pandas_values.loc['mean'] = pandas_values.mean(skipna=True, numeric_only=True)
     out = pandas_values.to_json(date_format='iso', orient='index')
     api_logger.info(f'Pandas conversion: {perf_counter() - start} seconds')
     return out
-    
