@@ -69,7 +69,7 @@ class CdkOperaDispStack(Stack):
             )
             self.access_point = file_system.add_access_point(
                 "DispAPIAccessPoint",
-                path="/",
+                path="/export/lambda",
                 create_acl=efs.Acl(
                     owner_uid="1001", owner_gid="1001", permissions="750"
                 ),
