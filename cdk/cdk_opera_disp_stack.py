@@ -4,16 +4,11 @@ from aws_cdk import (
     Duration,
     Stack,
     aws_apigateway as apigateway,
-    aws_apigatewayv2 as apigatewayV2,
     aws_lambda as _lambda,
     aws_logs as logs,
     aws_ec2 as ec2,
     aws_iam as iam,
-    # aws_efs as efs,
-    aws_ecs as ecs,
-    aws_ecs_patterns as ecs_patterns,
-    aws_ecr_assets as ecr_assets,
-    CfnOutput,
+    aws_efs as efs,
 )
 from constructs import Construct
 
@@ -35,6 +30,7 @@ class CdkOperaDispStack(Stack):
         except AttributeError:
             lambda_vpc_kwargs = {}
             apigateway_kwargs = {}
+            file_system = None
         else:
             vpc = ec2.Vpc.from_lookup(self, 'EDCVPC', vpc_id=vpc_id)
             subnet_selection = ec2.SubnetSelection(
@@ -58,6 +54,29 @@ class CdkOperaDispStack(Stack):
                 ),
             }
 
+            file_system = efs.FileSystem(
+                self,
+                "OPERADispAPIEFS",
+                vpc=vpc,
+                one_zone=True,
+                lifecycle_policy=efs.LifecyclePolicy.AFTER_14_DAYS,  # files are not transitioned to infrequent access (IA) storage by default
+                performance_mode=efs.PerformanceMode.GENERAL_PURPOSE,  # default
+                out_of_infrequent_access_policy=efs.OutOfInfrequentAccessPolicy.AFTER_1_ACCESS,  # files are not transitioned back from (infrequent access) IA to primary storage by default
+                transition_to_archive_policy=efs.LifecyclePolicy.AFTER_14_DAYS,  # files are not transitioned to Archive by default
+                replication_overwrite_protection=efs.ReplicationOverwriteProtection.ENABLED,
+            )
+            self.access_point = file_system.add_access_point(
+                "DispAPIAccessPoint",
+                path="/export/lambda",
+                create_acl=efs.Acl(
+                    owner_uid="1001", owner_gid="1001", permissions="750"
+                ),
+                # enforce the POSIX identity so lambda function will access with this identity
+                posix_user=efs.PosixUser(uid="1001", gid="1001"),
+            )
+        
+        
+
         dockerfileDir = '../'
         self.opera_timeseries_function = _lambda.DockerImageFunction(
             self,
@@ -69,9 +88,12 @@ class CdkOperaDispStack(Stack):
             function_name='DispServiceDockerAPIFunction',
             timeout=Duration.seconds(60),
             memory_size=10240,
-            # architecture=_lambda.Architecture.ARM_64,
+            filesystem=_lambda.FileSystem.from_efs_access_point(
+                ap=self.access_point, mount_path="/mnt/filesystem"
+            ) if self.access_point else None,
             **lambda_vpc_kwargs,
         )
+
 
         self.opera_timeseries_function.add_to_role_policy(
             iam.PolicyStatement(
