@@ -9,6 +9,7 @@ from aws_cdk import (
     aws_ec2 as ec2,
     aws_iam as iam,
     aws_efs as efs,
+    RemovalPolicy,
 )
 from constructs import Construct
 
@@ -30,7 +31,7 @@ class CdkOperaDispStack(Stack):
         except AttributeError:
             lambda_vpc_kwargs = {}
             apigateway_kwargs = {}
-            file_system = None
+            # file_system = None
         else:
             vpc = ec2.Vpc.from_lookup(self, 'EDCVPC', vpc_id=vpc_id)
             subnet_selection = ec2.SubnetSelection(
@@ -58,16 +59,17 @@ class CdkOperaDispStack(Stack):
                 self,
                 "OPERADispAPIEFS",
                 vpc=vpc,
-                throughput_mode=efs.ThroughputMode.ELASTIC,
+                performance_mode=efs.PerformanceMode.MAX_IO,
+                throughput_mode=efs.ThroughputMode.BURSTING,
                 lifecycle_policy=efs.LifecyclePolicy.AFTER_1_DAY,  # files are not transitioned to infrequent access (IA) storage by default
-                performance_mode=efs.PerformanceMode.GENERAL_PURPOSE,  # default
                 out_of_infrequent_access_policy=efs.OutOfInfrequentAccessPolicy.AFTER_1_ACCESS,  # files are not transitioned back from (infrequent access) IA to primary storage by default
                 transition_to_archive_policy=efs.LifecyclePolicy.AFTER_7_DAYS,  # files are not transitioned to Archive by default
                 replication_overwrite_protection=efs.ReplicationOverwriteProtection.ENABLED,
+                removal_policy=RemovalPolicy.DESTROY,
             )
             self.access_point = file_system.add_access_point(
                 "DispAPIAccessPoint",
-                path="/export/lambda",
+                path="/",
                 create_acl=efs.Acl(
                     owner_uid="1001", owner_gid="1001", permissions="750"
                 ),

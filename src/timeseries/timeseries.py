@@ -36,33 +36,33 @@ def get_timeseries_over_aoi(
     start = perf_counter()
 
     try:
-        fs = fsspec.filesystem(
-            'reference',
-            fo=file_store,
-            remote_protocol='s3',
-            target_options=dict(compression='gzip'),
-            remote_options={
-                'anon': False,
-                'default_fill_cache': False,
-                'skip_instance_cache': False,
-                **fsspec_params,
-            },
-        )
-        # fs = SimpleCacheFileSystem(
-        #     target_protocol='reference',
-        #     cache_storage=f'/mnt/filesystem/{file_store.split("/")[-1]}',
-        #     target_options={
-        #         'target_options': dict(compression='gzip'),
-        #         'fo': f'{file_store}',
-        #         'remote_options': {
-        #             'anon': False,
-        #             'default_fill_cache': True,
-        #             'skip_instance_cache': False,
-        #             **fsspec_params,
-        #         },
+        # fs = fsspec.filesystem(
+        #     'reference',
+        #     fo=file_store,
+        #     remote_protocol='s3',
+        #     target_options=dict(compression='gzip'),
+        #     remote_options={
+        #         'anon': False,
+        #         'default_fill_cache': False,
+        #         'skip_instance_cache': False,
+        #         **fsspec_params,
         #     },
-        #     asynchronous=True,
         # )
+        fs = SimpleCacheFileSystem(
+            target_protocol='reference',
+            cache_storage=f'/mnt/filesystem/{file_store.split("/")[-1]}',
+            target_options={
+                'target_options': dict(compression='gzip'),
+                'fo': f'{file_store}',
+                'remote_options': {
+                    'anon': False,
+                    'default_fill_cache': True,
+                    'skip_instance_cache': False,
+                    **fsspec_params,
+                },
+            },
+            asynchronous=True,
+        )
 
     except Exception as exc:
         api_logger.error(f'Failed to open file. Original Error: {exc}')
