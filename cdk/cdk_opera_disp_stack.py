@@ -58,7 +58,6 @@ class CdkOperaDispStack(Stack):
                 self,
                 "OPERADispAPIEFS",
                 vpc=vpc,
-                one_zone=True,
                 lifecycle_policy=efs.LifecyclePolicy.AFTER_14_DAYS,  # files are not transitioned to infrequent access (IA) storage by default
                 performance_mode=efs.PerformanceMode.GENERAL_PURPOSE,  # default
                 out_of_infrequent_access_policy=efs.OutOfInfrequentAccessPolicy.AFTER_1_ACCESS,  # files are not transitioned back from (infrequent access) IA to primary storage by default
