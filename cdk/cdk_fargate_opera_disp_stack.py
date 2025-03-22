@@ -160,27 +160,46 @@ class CdkFargateOperaDispStack(Stack):
         #         apigatewayV2.CfnApi(
         #
         # )
-        # self.dispApi = aws_apigateway.RestApi(
-        #     self,
-        #     'DispAPIFargate',
-        #     # api_name='DispServiceFargateApi',
-        #     description='Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service',
-        #     # create_default_stage=True,
-        #     # cors_preflight=apigatewayV2.CorsPreflightOptions(
-        #     #     allow_origins=['*'],
-        #     #     allow_methods=[
-        #     #         apigatewayV2.CorsHttpMethod.ANY
-        #     #     ],
-        #     # ),
-        #     endpoint_configuration=aws_apigateway.EndpointConfiguration(
-        #             # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
-        #             types=[aws_apigateway.EndpointType.PRIVATE]
-        #     ),
-        #     default_cors_preflight_options=aws_apigateway.CorsOptions(
-        #         allow_origins=aws_apigateway.Cors.ALL_ORIGINS,
-        #         allow_methods=aws_apigateway.Cors.ALL_METHODS,
-        #     ),
-        # )
+
+        self.dispApi = aws_apigateway.RestApi(
+            self,
+            'DispAPIFargate',
+            # api_name='DispServiceFargateApi',
+            description='Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service',
+            endpoint_configuration=aws_apigateway.EndpointConfiguration(
+                    # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
+                    types=[aws_apigateway.EndpointType.PRIVATE]
+            ),
+            default_cors_preflight_options=aws_apigateway.CorsOptions(
+                allow_origins=aws_apigateway.Cors.ALL_ORIGINS,
+                allow_methods=aws_apigateway.Cors.ALL_METHODS,
+            ),
+            deploy_options=aws_apigateway.StageOptions(
+                access_log_destination=aws_apigateway.LogGroupLogDestination(
+                    logs.LogGroup(
+                        self,
+                        'DispServiceFargateAPILogGroup',
+                        retention=logs.RetentionDays.THREE_MONTHS,
+                    )
+                ), # type: ignore
+                access_log_format=aws_apigateway.AccessLogFormat.custom(
+                    json.dumps(
+                        {
+                            'sourceIp': '$context.identity.sourceIp',
+                            'httpMethod': '$context.httpMethod',
+                            'path': '$context.path',
+                            'status': '$context.status',
+                            'responseLength': '$context.responseLength',
+                            'responseLatency': '$context.responseLatency',
+                            'requestTime': '$context.requestTime',
+                            'protocol': '$context.protocol',
+                            'userAgent': '$context.identity.userAgent',
+                            'requestId': '$context.requestId',
+                        }
+                    )
+                ),
+            ),
+        )
 
         # link = aws_apigateway.VpcLink(self, 'link',
         #     targets=[self.nlb],
@@ -200,8 +219,10 @@ class CdkFargateOperaDispStack(Stack):
 
         # )
 
-        CfnOutput(
-            self,
-            'dispAPIUrl',
-            value=self.nlb.load_balancer_dns_name,  # type: ignore
-        )
+        # CfnOutput(
+        #     self,
+        #     'dispAPIUrl',
+        #     value=self.nlb.load_balancer_dns_name,  # type: ignore
+        # )
+
+        
