@@ -1,5 +1,6 @@
 # import rasterio
 from datetime import datetime, timedelta
+from fastapi import HTTPException
 import fsspec
 import fsspec.config
 import numpy as np
@@ -17,15 +18,13 @@ from time import perf_counter
 from fsspec.implementations.cached import SimpleCacheFileSystem
 from src.exceptions import OutdatedStackException
 
-layer_types = ['short_wavelength_displacement']
-
 _data_variables = [
-    *layer_types,
     'netcdf_uri',
     'bytes',
     'reference_datetime',
     'secondary_datetime',
     'temporal_baseline',
+    'short_wavelength_displacement',
 ]
 
 
@@ -98,7 +97,7 @@ def get_timeseries_over_aoi(
     elif isinstance(geometry, Polygon) or isinstance(geometry, LineString):
         values = _read_layers_with_aoi(values, geometry)
     api_logger.info(f'AOI Read Speed: {perf_counter() - start} seconds')
-    return _pandas_output(values)
+    return _pandas_output(values, wkt=geometry.wkt)
 
 
 def _latest_product_versions(values: xr.Dataset) -> xr.Dataset:
@@ -122,14 +121,8 @@ def _read_layers_at_pixel(dataset: xr.Dataset, lat: float, lon: float) -> xr.Dat
     xx, yy = _to_crs(lat, lon, target_proj=crs.to_epsg())
     xx_index = np.abs(dataset.x.data - xx).argmin()
     yy_index = np.abs(dataset.y.data - yy).argmin()
-    # FIXME remove when no longer using old staged data
-    important_variable = (
-        'unwrapped_phase'
-        if 'unwrapped_phase' in list(dataset.data_vars)
-        else 'short_wavelength_displacement'
-    )
-    data_variables = [important_variable] + _data_variables
-    return dataset[data_variables].isel(x=xx_index, y=yy_index)
+
+    return dataset[_data_variables].isel(x=xx_index, y=yy_index)
 
 
 def _read_layers_with_aoi(dataset: xr.Dataset, geometry: BaseGeometry):
@@ -224,10 +217,15 @@ def _fix_rolling_reference(data: pandas.DataFrame) -> pandas.DataFrame:
     return data
 
 
-def _pandas_output(data: xr.Dataset):
+def _pandas_output(data: xr.Dataset, wkt: str):
     start = perf_counter()
     data = data.sortby('secondary_datetime')
     pandas_values = data.to_dataframe()
+    pandas_values = pandas_values[~pandas_values['short_wavelength_displacement'].isna()]
+    
+    if len(pandas_values) == 0:
+        raise HTTPException(400, detail=f'No valid data found for wkt "{wkt}"')
+    
     pandas_values = _fix_rolling_reference(pandas_values)
 
     pandas_values = pandas_values.reset_index().set_index('source_file_name')

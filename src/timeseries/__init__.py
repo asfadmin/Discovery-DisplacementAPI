@@ -1,1 +1,1 @@
-from .timeseries import get_timeseries_over_aoi, layer_types  # noqa F401
+from .timeseries import get_timeseries_over_aoi  # noqa F401
