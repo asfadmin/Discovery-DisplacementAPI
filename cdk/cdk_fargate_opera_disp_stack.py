@@ -174,30 +174,30 @@ class CdkFargateOperaDispStack(Stack):
                 allow_origins=aws_apigateway.Cors.ALL_ORIGINS,
                 allow_methods=aws_apigateway.Cors.ALL_METHODS,
             ),
-            deploy_options=aws_apigateway.StageOptions(
-                access_log_destination=aws_apigateway.LogGroupLogDestination(
-                    logs.LogGroup(
-                        self,
-                        'DispServiceFargateAPILogGroup',
-                        retention=logs.RetentionDays.THREE_MONTHS,
-                    )
-                ), # type: ignore
-                access_log_format=aws_apigateway.AccessLogFormat.custom(
-                    json.dumps(
-                        {
-                            'sourceIp': '$context.identity.sourceIp',
-                            'httpMethod': '$context.httpMethod',
-                            'path': '$context.path',
-                            'status': '$context.status',
-                            'responseLength': '$context.responseLength',
-                            'responseLatency': '$context.responseLatency',
-                            'requestTime': '$context.requestTime',
-                            'protocol': '$context.protocol',
-                            'userAgent': '$context.identity.userAgent',
-                            'requestId': '$context.requestId',
-                        }
-                    )
-                ),
+            # deploy_options=aws_apigateway.StageOptions(
+            #     access_log_destination=aws_apigateway.LogGroupLogDestination(
+            #         logs.LogGroup(
+            #             self,
+            #             'DispServiceFargateAPILogGroup',
+            #             retention=logs.RetentionDays.THREE_MONTHS,
+            #         )
+            #     ), # type: ignore
+            #     access_log_format=aws_apigateway.AccessLogFormat.custom(
+            #         json.dumps(
+            #             {
+            #                 'sourceIp': '$context.identity.sourceIp',
+            #                 'httpMethod': '$context.httpMethod',
+            #                 'path': '$context.path',
+            #                 'status': '$context.status',
+            #                 'responseLength': '$context.responseLength',
+            #                 'responseLatency': '$context.responseLatency',
+            #                 'requestTime': '$context.requestTime',
+            #                 'protocol': '$context.protocol',
+            #                 'userAgent': '$context.identity.userAgent',
+            #                 'requestId': '$context.requestId',
+            #             }
+            #         )
+            #     ),
             ),
         )
 
