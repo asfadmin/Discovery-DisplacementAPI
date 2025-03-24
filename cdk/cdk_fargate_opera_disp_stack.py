@@ -124,25 +124,24 @@ class CdkFargateOperaDispStack(Stack):
                 resources=[
                     'arn:aws:s3:::asf-cumulus-test-opera-products/*',
                     'arn:aws:s3:::asf-cumulus-test-opera-products/',
+                    'arn:aws:s3:::asf-cumulus-prod-opera-products/*',
+                    'arn:aws:s3:::asf-cumulus-prod-opera-products/',
                 ],
             )
         )
 
         # cluster = ecs.Cluster(self, 'OperaDispFargateCluster', vpc=ecs_vpc_kwargs['vpc'])
 
-        fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
+        self.fargate_service = ecs_patterns.NetworkLoadBalancedFargateService(
             self,
-            'OperaDispFargateALBService',
+            'OperaDispFargateNLBService',
             task_definition=task_definition,
             memory_limit_mib=16384,
             cpu=2048,
             desired_count=2,
             public_load_balancer=False,
-            # listener_port=8080,
             **fargate_vpc_kwargs,
         )
-
-        self.nlb = fargate_service.load_balancer
         
         # self.nlb.add_security_group(security_group)
         # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
@@ -161,45 +160,45 @@ class CdkFargateOperaDispStack(Stack):
         #
         # )
 
-        self.dispApi = aws_apigateway.RestApi(
-            self,
-            'DispAPIFargate',
-            # api_name='DispServiceFargateApi',
-            description='Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service',
-            endpoint_configuration=aws_apigateway.EndpointConfiguration(
-                    # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
-                    types=[aws_apigateway.EndpointType.PRIVATE]
-            ),
-            default_cors_preflight_options=aws_apigateway.CorsOptions(
-                allow_origins=aws_apigateway.Cors.ALL_ORIGINS,
-                allow_methods=aws_apigateway.Cors.ALL_METHODS,
-            ),
-            # deploy_options=aws_apigateway.StageOptions(
-            #     access_log_destination=aws_apigateway.LogGroupLogDestination(
-            #         logs.LogGroup(
-            #             self,
-            #             'DispServiceFargateAPILogGroup',
-            #             retention=logs.RetentionDays.THREE_MONTHS,
-            #         )
-            #     ), # type: ignore
-            #     access_log_format=aws_apigateway.AccessLogFormat.custom(
-            #         json.dumps(
-            #             {
-            #                 'sourceIp': '$context.identity.sourceIp',
-            #                 'httpMethod': '$context.httpMethod',
-            #                 'path': '$context.path',
-            #                 'status': '$context.status',
-            #                 'responseLength': '$context.responseLength',
-            #                 'responseLatency': '$context.responseLatency',
-            #                 'requestTime': '$context.requestTime',
-            #                 'protocol': '$context.protocol',
-            #                 'userAgent': '$context.identity.userAgent',
-            #                 'requestId': '$context.requestId',
-            #             }
-            #         )
-            #     ),
-            # ),
-        )
+        # self.dispApi = aws_apigateway.RestApi(
+        #     self,
+        #     'DispAPIFargate',
+        #     # api_name='DispServiceFargateApi',
+        #     description='Api Gateway V2 proxy for OPERA DISP S1 API Fargate Service',
+        #     endpoint_configuration=aws_apigateway.EndpointConfiguration(
+        #             # https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_apigateway.EndpointConfiguration.html
+        #             types=[aws_apigateway.EndpointType.PRIVATE]
+        #     ),
+        #     default_cors_preflight_options=aws_apigateway.CorsOptions(
+        #         allow_origins=aws_apigateway.Cors.ALL_ORIGINS,
+        #         allow_methods=aws_apigateway.Cors.ALL_METHODS,
+        #     ),
+        #     deploy_options=aws_apigateway.StageOptions(
+        #         access_log_destination=aws_apigateway.LogGroupLogDestination(
+        #             logs.LogGroup(
+        #                 self,
+        #                 'DispServiceFargateAPILogGroup',
+        #                 retention=logs.RetentionDays.THREE_MONTHS,
+        #             )
+        #         ), # type: ignore
+        #         access_log_format=aws_apigateway.AccessLogFormat.custom(
+        #             json.dumps(
+        #                 {
+        #                     'sourceIp': '$context.identity.sourceIp',
+        #                     'httpMethod': '$context.httpMethod',
+        #                     'path': '$context.path',
+        #                     'status': '$context.status',
+        #                     'responseLength': '$context.responseLength',
+        #                     'responseLatency': '$context.responseLatency',
+        #                     'requestTime': '$context.requestTime',
+        #                     'protocol': '$context.protocol',
+        #                     'userAgent': '$context.identity.userAgent',
+        #                     'requestId': '$context.requestId',
+        #                 }
+        #             )
+        #         ),
+        #     ),
+        # )
 
         # link = aws_apigateway.VpcLink(self, 'link',
         #     targets=[self.nlb],
