@@ -2,25 +2,21 @@ import logging
 import fsspec
 import rasterio
 import xarray as xr
-
+from src import api_logger
 # from fsspec.implementations.local import S3FileSystem
 from s3fs.core import S3FileSystem
-
+from time import perf_counter
 
 def open_zarr_store(file_system: S3FileSystem, group='/') -> xr.Dataset:
     # Implements example from Luis López using fsspec_params and driver_config for kerchunked zarr store
     # https://gist.github.com/betolink/b545c364f80882c113b8cc27b763c729
 
     m = file_system.get_mapper('')
-
-    dataset = xr.open_dataset(
+    return xr.open_dataset(
         m,  # type: ignore
         engine='zarr',
         backend_kwargs={'consolidated': False, 'group': group},
     )
-
-    return dataset
-
 
 def get_bounding_polygon(file_uri: str):
     fs = fsspec.filesystem(
@@ -45,14 +41,14 @@ def get_wkt_from_dataset(
 ):
     wkt = str(identification.variables['bounding_polygon'].data)
     epsg = str(get_crs(data).to_epsg())
-    logging.debug(msg=f'Got epsg {epsg} from crs')
+    api_logger.debug(msg=f'Got epsg {epsg} from crs')
 
     return {'wkt': wkt, 'epsg': epsg}
 
 
 def get_crs(data):
-    logging.debug(msg='Reading crs')
+    api_logger.debug(msg='Reading crs')
     spatial_ref = data.variables['spatial_ref']
     crs = rasterio.crs.CRS.from_string(spatial_ref.attrs['crs_wkt'])  # type: ignore
-    logging.debug(msg=f'Read crs from data: {str(crs)}')
+    api_logger.debug(msg=f'Read crs from data: {str(crs)}')
     return crs

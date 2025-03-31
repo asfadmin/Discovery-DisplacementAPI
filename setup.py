@@ -5,8 +5,8 @@ from setuptools import find_packages, setup
 requirements = [
     'uvicorn==0.28.0',
     'fastapi==0.110.0',
+    'xarray==2025.01.1',
     'numpy==1.26.4',
-    'xarray==2024.2.0',
     'rasterio==1.3.9',
     'h5netcdf',
     'python-json-logger==2.0.7',

@@ -1,11 +1,22 @@
-from pydantic import BaseModel, Field
+from typing import Optional
+from pydantic import BaseModel, Field, field_validator
 from .constants import Polarizations
 
-
-class WKTModel(BaseModel):
+class GetFramesModel(BaseModel):
     wkt: str
+    flightDirection: str = Field(pattern=r'((ASC)|(DESC))(ENDING)?', default='ASCENDING')
 
+    @field_validator('flightDirection', mode='before')
+    @classmethod
+    def pre_validate_flightdir(cls, v: str) -> str:
+        return v.upper()
 
-class TimeSeriesModel(WKTModel):
+    @field_validator('flightDirection', mode='after')
+    @classmethod
+    def post_validate_flightdir(cls, v: str) -> str:
+        return 'ASCENDING' if v in 'ASCENDING' else 'DESCENDING'
+
+class TimeSeriesModel(GetFramesModel):
     bucket: str = Field(pattern=r'[^/^\\]*')
     polarization: Polarizations = Polarizations.VV
+    frameId: Optional[str] = Field(None, pattern=r'^\d{5}$')
