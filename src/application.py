@@ -173,7 +173,7 @@ def _get_frames_for_wkt(wkt: str, flight_direction: str) -> list[str]:
     gdf = gpd.read_file(frame_path, engine='pyogrio')
     result = gdf[gdf.orbit_direction==flight_direction][gdf.intersects(geometry)]
     result['west_most_point'] = result.geometry.bounds.minx
-    result.sort_values(by='west_most_point', ascending=flight_direction == 'ASCENDING')
+    result.sort_values(by='west_most_point', ascending=flight_direction == 'DESCENDING')
 
     frame_ids = set(result['frame_id'])
 
