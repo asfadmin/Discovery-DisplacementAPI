@@ -164,7 +164,7 @@ def _get_westmost_file_store_for_wkt(bucket: str, wkt: str, polarization: str, f
             400, f'No data found for the given area of interest {wkt}'
         )
 
-    return available_zarr_stores[0]
+    return available_zarr_stores[0] if flight_direction.upper() == 'DESCENDING' else available_zarr_stores[-1]
 
 
 def _get_frames_for_wkt(wkt: str, flight_direction: str) -> list[str]:
