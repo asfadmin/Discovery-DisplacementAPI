@@ -221,15 +221,17 @@ def _pandas_output(data: xr.Dataset, wkt: str):
     start = perf_counter()
     data = data.sortby('secondary_datetime')
     pandas_values = data.to_dataframe()
-    pandas_values = pandas_values[~pandas_values['short_wavelength_displacement'].isna()]
-    
-    if len(pandas_values) == 0:
+    nans = pandas_values['short_wavelength_displacement'].isna()
+
+    if len(pandas_values[~nans]) == 0:
         raise HTTPException(400, detail=f'No valid data found for wkt "{wkt}"')
     
+    pandas_values['short_wavelength_displacement'] = pandas_values['short_wavelength_displacement'].fillna(0)
     pandas_values = _fix_rolling_reference(pandas_values)
 
     pandas_values = pandas_values.reset_index().set_index('source_file_name')
-    pandas_values.loc['mean'] = pandas_values.mean(skipna=True, numeric_only=True)
+    pandas_values.loc['mean'] = pandas_values[~nans].mean(skipna=True, numeric_only=True)
+    pandas_values['is_masked'] = nans.astype(bool)
     out = pandas_values.to_json(date_format='iso', orient='index')
     api_logger.info(f'Pandas conversion: {perf_counter() - start} seconds')
     return out
