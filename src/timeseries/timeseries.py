@@ -13,6 +13,7 @@ from shapely.ops import transform as shapely_transform
 from shapely.geometry.base import BaseGeometry
 import geopandas as gpd
 import pandas
+import re
 from src import api_logger
 from time import perf_counter
 from fsspec.implementations.cached import SimpleCacheFileSystem
@@ -224,12 +225,17 @@ def _pandas_output(data: xr.Dataset, wkt: str):
     nans = pandas_values['short_wavelength_displacement'].isna()
 
     if len(pandas_values[~nans]) == 0:
-        raise HTTPException(400, detail=f'No valid data found for wkt "{wkt}"')
+        raise HTTPException(400, detail=f'No data exists for wkt "{wkt}"')
     
     pandas_values['short_wavelength_displacement'] = pandas_values['short_wavelength_displacement'].fillna(0)
     pandas_values = _fix_rolling_reference(pandas_values)
 
     pandas_values = pandas_values.reset_index().set_index('source_file_name')
+    file_name = str(pandas_values.iloc[0].name)
+    frame_name = re.search(r'.*_(F[1-9]*)_.*', file_name)
+    if frame_name and len(frame_name.groups()):
+        pandas_values['frame'] = np.full(len(pandas_values), frame_name.group(1))
+
     pandas_values.loc['mean'] = pandas_values[~nans].mean(skipna=True, numeric_only=True)
     pandas_values['is_masked'] = nans.astype(bool)
     out = pandas_values.to_json(date_format='iso', orient='index')
