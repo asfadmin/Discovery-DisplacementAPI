@@ -49,10 +49,10 @@ class ReadLayer(BaseModel):
 )
 def get_timeseries(series: TimeSeriesModel):
     # TODO: REMOVE BEFORE ANOTHER PRODUCTION RELEASE
-    return 400, {
-        'type': 'error',
-        'message': 'The test displacement API is temporarily disabled due to unintended usage. For programmatic queries please access the zarr stack store `displacement` layer directly. For more info or questions please contact uso@asf.alaska.edu'
-    }
+    return HTTPException(
+        status_code=400,
+        detail='The test displacement API is temporarily disabled due to unintended usage. For programmatic queries please access the zarr stack store `displacement` layer directly. For more info or questions please contact uso@asf.alaska.edu',
+    )
     start = perf_counter()
     try:
         geometry = shapely_wkt.loads(series.wkt)
