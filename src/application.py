@@ -48,6 +48,11 @@ class ReadLayer(BaseModel):
     description='Returns a json response with values read at "unwrapped_phase", "interferometric_correlation", and "temporal_coherence" layers in provided files at given point',
 )
 def get_timeseries(series: TimeSeriesModel):
+    # TODO: REMOVE BEFORE ANOTHER PRODUCTION RELEASE
+    return 400, {
+        'type': 'error',
+        'message': 'The test displacement API is temporarily disabled due to unintended usage. For programmatic queries please access the zarr stack store `displacement` layer directly. For more info or questions please contact uso@asf.alaska.edu'
+    }
     start = perf_counter()
     try:
         geometry = shapely_wkt.loads(series.wkt)
@@ -118,14 +123,14 @@ def _simplify_multipolygons(geometry: BaseGeometry) -> BaseGeometry:
     """In case polygon intersects different sections of frame at once and get multi-polygon (swath corners for example), perform convex hull instead"""
     if geometry.geom_type == 'MultiPolygon':
         geometry = convex_hull(geometry)
-    
+
     return geometry
 
 def _get_file_store_for_wkt(bucket: str, frame_id: str, polarization: str):
     return f's3://{bucket}/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_short_wavelength_displacement.zarr.json.gz'
 
 def _get_zarr_store_uri(bucket: str, wkt: str, frame_id: str | None, polarization: str, flight_direction: str):
-    if isinstance(frame_id, str): 
+    if isinstance(frame_id, str):
         zarr_store = _get_file_store_for_wkt(bucket=bucket, frame_id=frame_id, polarization=polarization)
 
         s3 = s3fs.S3FileSystem(anon=False)
@@ -143,15 +148,15 @@ def _get_zarr_store_uri(bucket: str, wkt: str, frame_id: str | None, polarizatio
 def _get_westmost_file_store_for_wkt(bucket: str, wkt: str, polarization: str, flight_direction: str):
     # example:
     # s3://asf-cumulus-test-opera-products/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F44328_VV_V1/OPERA_L3_DISP-S1_IW_F44328_VV_short_wavelength_displacement.zarr.json.gz
-    
+
     zarr_stores = [
         _get_file_store_for_wkt(bucket=bucket, frame_id=frame_id, polarization=polarization)
         for frame_id in _get_frames_for_wkt(wkt, flight_direction)
     ]
 
     s3 = s3fs.S3FileSystem(anon=False)
-    
-    available_zarr_stores = []  
+
+    available_zarr_stores = []
     for store in zarr_stores:
         try:
             if s3.exists(store):
