@@ -1,10 +1,13 @@
 import os
 import pathlib
-import requests
-import yaml
 
-local_url = 'http://127.0.0.1:8000'
+import yaml
+from fastapi.testclient import TestClient
+
+from src.application import app
+
 timeseries_endpoint = '/timeseries'
+client = TestClient(app)
 
 
 def test_timeseries(**args) -> None:
@@ -12,28 +15,9 @@ def test_timeseries(**args) -> None:
     params = test_info['params']
     expected_response = test_info['response']
 
-    file_store = params['file_store']
-    wkt = params['wkt']
-
     status_code = expected_response['status_code']
 
-    fsspec_params = None
-    driver_keywords = None
-
-    if (fsspec_config := test_info.get('fsspec_params')) is not None:
-        fsspec_params = fsspec_config
-
-    if (driver_kwds := test_info.get('driver_keywords')) is not None:
-        driver_keywords = driver_kwds
-
-    test_data = {
-        'wkt': wkt,
-        'file_store': file_store,
-        'fsspec_params': fsspec_params,
-        'driver_keywords': driver_keywords,
-    }
-
-    response = requests.post(url=f'{local_url}{timeseries_endpoint}', json=test_data)
+    response = client.post(url=f'{timeseries_endpoint}', json=params)
 
     if status_code == 200:
         try:
@@ -41,9 +25,9 @@ def test_timeseries(**args) -> None:
         except BaseException as exc:
             raise Exception(f'timeseries endpoint failed. Reason: {exc}')
     else:
-        assert (
-            response.status_code == status_code
-        ), f'Expected error code {status_code}, got response code {response.status_code}, "{response.text}"'
+        assert response.status_code == status_code, (
+            f'Expected error code {status_code}, got response code {response.status_code}, "{response.text}"'
+        )
 
     expected_output = expected_response.get('expected_output')
 

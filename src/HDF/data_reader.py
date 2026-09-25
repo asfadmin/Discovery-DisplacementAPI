@@ -1,11 +1,12 @@
-import logging
 import fsspec
 import rasterio
 import xarray as xr
-from src import api_logger
+
 # from fsspec.implementations.local import S3FileSystem
 from s3fs.core import S3FileSystem
-from time import perf_counter
+
+from src import api_logger
+
 
 def open_zarr_store(file_system: S3FileSystem, group='/') -> xr.Dataset:
     # Implements example from Luis López using fsspec_params and driver_config for kerchunked zarr store
@@ -18,15 +19,14 @@ def open_zarr_store(file_system: S3FileSystem, group='/') -> xr.Dataset:
         backend_kwargs={'consolidated': False, 'group': group},
     )
 
+
 def get_bounding_polygon(file_uri: str):
     fs = fsspec.filesystem(
         'reference',
-        **{
-            'fo': file_uri,
-            'remote_protocol': 's3',
-            'compression': 'gzip',
-            'remote_options': {'anon': False},
-        },
+        fo=file_uri,
+        remote_protocol='s3',
+        compression='gzip',
+        remote_options={'anon': False},
         # One line required to specify compression here
         target_options={'compression': 'gzip'},
     )
@@ -50,5 +50,5 @@ def get_crs(data):
     api_logger.debug(msg='Reading crs')
     spatial_ref = data.variables['spatial_ref']
     crs = rasterio.crs.CRS.from_string(spatial_ref.attrs['crs_wkt'])  # type: ignore
-    api_logger.debug(msg=f'Read crs from data: {str(crs)}')
+    api_logger.debug(msg=f'Read crs from data: {crs!s}')
     return crs

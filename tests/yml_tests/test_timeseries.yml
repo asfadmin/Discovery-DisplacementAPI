@@ -1,64 +1,66 @@
 tests:
-  - test timeseries stack 59 files:
+  - test timeseries ridgecrest CA quake ASCENDING:
       params:
-        file_store: s3://kfbx-opera-disp-test-bucket-v0.6/OPERA_L3_DISP-S1_IW_F42779_VV.json.zarr.gz
-        wkt: POINT(-148.7597 61.5164)
+        bucket: asf-cumulus-prod-opera-products
+        wkt: POINT(-117.69124803858051 35.84163695732987)
+        flightDirection: ASCENDING
       response:
         status_code: 200
-        expected_output: sample_point_stack_data.yml
+        expected_output: ridgecrest_ca_quake_ascending.yml
 
-  - test timeseries stack 59 files out-of-bounds lat lon:
+  - test timeseries ridgecrest CA quake DESCENDING:
       params:
-        file_store: s3://kfbx-opera-disp-test-bucket-v0.6/OPERA_L3_DISP-S1_IW_F42779_VV.json.zarr.gz
-        wkt: POINT (0 0)
+        bucket: asf-cumulus-prod-opera-products
+        wkt: POINT(-117.69124803858051 35.84163695732987)
+        flightDirection: DESCENDING
       response:
         status_code: 200
-        expected_output: sample_point_stack_nodata.yml
+        expected_output: ridgecrest_ca_quake_descending.yml
 
   - test timeseries empty files:
       params:
-        file_store: ""
+        bucket: ""
         wkt: POINT (0 0)
       response:
-        status_code: 422
+        status_code: 400
 
 # TODO: re-enable and update these tests for linestring/polygon aois
-  # - test timeseries stack 14 files polygon in bounds:
-  #     params:
-  #       file_store: s3://kfbx-opera-disp-test-bucket-v0.6/OPERA_L3_DISP-S1_IW_F42779_VV.json.zarr.gz
-  #       wkt: POLYGON((-121.0826 38.5164,-120.8805 38.5164,-120.8805 38.6335,-121.0826 38.6335,-121.0826 38.5164))
-  #     response:
-  #       status_code: 200
-  #       expected_output: sample_in_frame_polygon_stack_data.yml
+# - test timeseries stack 14 files polygon in bounds:
+#     params:
+#       file_store: s3://kfbx-opera-disp-test-bucket-v0.6/OPERA_L3_DISP-S1_IW_F42779_VV.json.zarr.gz
+#       wkt: POLYGON((-121.0826 38.5164,-120.8805 38.5164,-120.8805 38.6335,-121.0826 38.6335,-121.0826 38.5164))
+#     response:
+#       status_code: 200
+#       expected_output: sample_in_frame_polygon_stack_data.yml
 
-  # - test timeseries stack 14 files polygon out of bounds:
-  #     params:
-  #       file_store: s3://kfbx-opera-disp-test-bucket-v0.6/OPERA_L3_DISP-S1_IW_F42779_VV.json.zarr.gz
-  #       wkt: POLYGON((-119.1817 38.6755,-119.1725 38.6755,-119.1725 38.6816,-119.1817 38.6816,-119.1817 38.6755))
-  #     response:
-  #       status_code: 200
-  #       expected_output: sample_out_frame_polygon_stack_data.yml
+# - test timeseries stack 14 files polygon out of bounds:
+#     params:
+#       file_store: s3://kfbx-opera-disp-test-bucket-v0.6/OPERA_L3_DISP-S1_IW_F42779_VV.json.zarr.gz
+#       wkt: POLYGON((-119.1817 38.6755,-119.1725 38.6755,-119.1725 38.6816,-119.1817 38.6816,-119.1817 38.6755))
+#     response:
+#       status_code: 200
+#       expected_output: sample_out_frame_polygon_stack_data.yml
 
-  # - test timeseries stack 14 files polygon partial out of bounds:
-  #     params:
-  #       file_store: s3://kfbx-opera-disp-test-bucket-v0.6/OPERA_L3_DISP-S1_IW_F42779_VV.json.zarr.gz
-  #       wkt: POLYGON((-120.4882 38.1315,-120.4772 38.1315,-120.4772 38.1336,-120.4882 38.1336,-120.4882 38.1315))
-  #     response:
-  #       status_code: 200
-  #       expected_output: sample_double_intersect_frame_polygon_stack_data.yml
+# - test timeseries stack 14 files polygon partial out of bounds:
+#     params:
+#       file_store: s3://kfbx-opera-disp-test-bucket-v0.6/OPERA_L3_DISP-S1_IW_F42779_VV.json.zarr.gz
+#       wkt: POLYGON((-120.4882 38.1315,-120.4772 38.1315,-120.4772 38.1336,-120.4882 38.1336,-120.4882 38.1315))
+#     response:
+#       status_code: 200
+#       expected_output: sample_double_intersect_frame_polygon_stack_data.yml
 
-  # - test timeseries stack 14 files polygon in bounds linestring:
-  #     params:
-  #       file_store: s3://kfbx-opera-disp-test-bucket-v0.6/OPERA_L3_DISP-S1_IW_F42779_VV.json.zarr.gz
-  #       wkt: LINESTRING(-121.1277 38.7315,-121.1431 38.7479,-121.1649 38.7227)
-  #     response:
-  #       status_code: 200
-  #       expected_output: 3_point_linestring_folsom_lake.yml
-  # - test timeseries stack 1 file:
-  #     params:
-  #       files: ["s3://kfbx-opera-disp-test-bucket/20221107_20221213.unw.nc"]
-  #       lat: 38.57
-  #       lon: -121.53
-  #     response:
-  #       status_code: 200
-  #       expected_output: sample_point_stack_data.yml
+# - test timeseries stack 14 files polygon in bounds linestring:
+#     params:
+#       file_store: s3://kfbx-opera-disp-test-bucket-v0.6/OPERA_L3_DISP-S1_IW_F42779_VV.json.zarr.gz
+#       wkt: LINESTRING(-121.1277 38.7315,-121.1431 38.7479,-121.1649 38.7227)
+#     response:
+#       status_code: 200
+#       expected_output: 3_point_linestring_folsom_lake.yml
+# - test timeseries stack 1 file:
+#     params:
+#       files: ["s3://kfbx-opera-disp-test-bucket/20221107_20221213.unw.nc"]
+#       lat: 38.57
+#       lon: -121.53
+#     response:
+#       status_code: 200
+#       expected_output: sample_point_stack_data.yml

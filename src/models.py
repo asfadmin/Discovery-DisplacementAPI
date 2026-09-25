@@ -1,6 +1,7 @@
-from typing import Optional
 from pydantic import BaseModel, Field, field_validator
+
 from .constants import Polarizations
+
 
 class GetFramesModel(BaseModel):
     wkt: str
@@ -16,7 +17,8 @@ class GetFramesModel(BaseModel):
     def post_validate_flightdir(cls, v: str) -> str:
         return 'ASCENDING' if v in 'ASCENDING' else 'DESCENDING'
 
+
 class TimeSeriesModel(GetFramesModel):
     bucket: str = Field(pattern=r'[^/^\\]*')
     polarization: Polarizations = Polarizations.VV
-    frameId: Optional[str] = Field(None, pattern=r'^\d{5}$')
+    frameId: str | None = Field(None, pattern=r'^\d{5}$')

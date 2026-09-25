@@ -1,26 +1,25 @@
-from fastapi import APIRouter, FastAPI, HTTPException, Response
 from pathlib import Path
 from time import perf_counter
-import logging
 
-from fastapi.responses import JSONResponse
+import geopandas as gpd
+import s3fs
+from fastapi import APIRouter, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from shapely import GEOSException, convex_hull
+from shapely import wkt as shapely_wkt
+from shapely.geometry.base import BaseGeometry
+
+from src import api_logger
 from src.exceptions import MissingFrameException
 from src.models import (
-    TimeSeriesModel,
     GetFramesModel,
+    TimeSeriesModel,
 )
 from src.timeseries import get_timeseries_over_aoi
-from src import api_logger
-import s3fs
-import geopandas as gpd
 
 from . import log_router
-from shapely import wkt as shapely_wkt
-from shapely import convex_hull
-from shapely.geometry.base import BaseGeometry
 
 router = APIRouter(route_class=log_router.LoggingRoute)
 app = FastAPI()
@@ -39,30 +38,33 @@ DEFAULT_HEADERS = {
 def read_root():
     return {'Status': 'A-Okay'}
 
+
 class ReadLayer(BaseModel):
     file_name: str
     layer: str
+
 
 @app.post(
     '/timeseries',
     description='Returns a json response with values read at "unwrapped_phase", "interferometric_correlation", and "temporal_coherence" layers in provided files at given point',
 )
 def get_timeseries(series: TimeSeriesModel):
-    # TODO: REMOVE BEFORE ANOTHER PRODUCTION RELEASE
-    return HTTPException(
-        status_code=400,
-        detail='The test displacement API is temporarily disabled due to unintended usage. For programmatic queries please access the zarr stack store `displacement` layer directly. For more info or questions please contact uso@asf.alaska.edu',
-    )
+    # # TODO: REMOVE BEFORE ANOTHER PRODUCTION RELEASE
+    # return HTTPException(
+    #     status_code=400,
+    #     detail='The test displacement API is temporarily disabled due to unintended usage. For programmatic queries please access the zarr stack store `displacement` layer directly. For more info or questions please contact uso@asf.alaska.edu',
+    # )
     start = perf_counter()
     try:
         geometry = shapely_wkt.loads(series.wkt)
-    except BaseException as exc:
+    except GEOSException as exc:
         raise HTTPException(
             400, detail=f'Failed to load provided wkt string. Original Error: {exc}'
         )
     if geometry.geom_type not in ['Polygon', 'Point']:
         raise HTTPException(
-            400, detail=f'Failed to load provided wkt. Must be "POLYGON" or "POINT", got {geometry.geom_type.upper()}'
+            400,
+            detail=f'Failed to load provided wkt. Must be "POLYGON" or "POINT", got {geometry.geom_type.upper()}',
         )
 
     api_logger.debug(f'wkt loaded: {geometry.wkt}')
@@ -72,8 +74,8 @@ def get_timeseries(series: TimeSeriesModel):
         wkt=series.wkt,
         frame_id=series.frameId,
         polarization=series.polarization.value,
-        flight_direction=series.flightDirection
-        )
+        flight_direction=series.flightDirection,
+    )
 
     api_logger.info(f'using file store: {file_store}')
 
@@ -97,9 +99,13 @@ def get_timeseries(series: TimeSeriesModel):
 )
 def get_frame_ids(wkt_event: GetFramesModel):
     return JSONResponse(
-        {'frame_ids': sorted(_get_frames_for_wkt(wkt_event.wkt, wkt_event.flightDirection)), 'wkt': wkt_event.wkt},
+        {
+            'frame_ids': sorted(_get_frames_for_wkt(wkt_event.wkt, wkt_event.flightDirection)),
+            'wkt': wkt_event.wkt,
+        },
         headers=DEFAULT_HEADERS,
     )
+
 
 @app.post(
     '/frame_intersection',
@@ -112,12 +118,16 @@ def frame_intersection(wkt_event: GetFramesModel):
     frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
     geometry = shapely_wkt.loads(wkt_event.wkt)
     gdf = gpd.read_file(frame_path, engine='pyogrio')
-    frames: gpd.GeoDataFrame = gdf[gdf['frame_id'].isin([int(p) for p in overlapping_frames])] # type: ignore
+    frames: gpd.GeoDataFrame = gdf[gdf['frame_id'].isin([int(p) for p in overlapping_frames])]
     intersection = frames.intersection(geometry)
     return JSONResponse(
-        {_pad_frame_str(frame_id): _simplify_multipolygons(geom).wkt for frame_id, geom in zip(gdf.iloc[intersection.index]['frame_id'], intersection)},
+        {
+            _pad_frame_str(frame_id): _simplify_multipolygons(geom).wkt
+            for frame_id, geom in zip(gdf.iloc[intersection.index]['frame_id'], intersection)
+        },
         headers=DEFAULT_HEADERS,
     )
+
 
 def _simplify_multipolygons(geometry: BaseGeometry) -> BaseGeometry:
     """In case polygon intersects different sections of frame at once and get multi-polygon (swath corners for example), perform convex hull instead"""
@@ -126,26 +136,35 @@ def _simplify_multipolygons(geometry: BaseGeometry) -> BaseGeometry:
 
     return geometry
 
+
 def _get_file_store_for_wkt(bucket: str, frame_id: str, polarization: str):
     return f's3://{bucket}/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_V1/OPERA_L3_DISP-S1_IW_F{frame_id}_{polarization}_short_wavelength_displacement.zarr.json.gz'
 
-def _get_zarr_store_uri(bucket: str, wkt: str, frame_id: str | None, polarization: str, flight_direction: str):
+
+def _get_zarr_store_uri(
+    bucket: str, wkt: str, frame_id: str | None, polarization: str, flight_direction: str
+):
     if isinstance(frame_id, str):
-        zarr_store = _get_file_store_for_wkt(bucket=bucket, frame_id=frame_id, polarization=polarization)
+        zarr_store = _get_file_store_for_wkt(
+            bucket=bucket, frame_id=frame_id, polarization=polarization
+        )
 
         s3 = s3fs.S3FileSystem(anon=False)
         try:
             if s3.exists(zarr_store):
                 return zarr_store
         except Exception as exc:
-            logging.debug(f'Failed to open store "{zarr_store}". Original exception: {exc}')
-        raise MissingFrameException(
-            400, f'No data found for the given area of interest {wkt}'
-        )
+            api_logger.debug(f'Failed to open store "{zarr_store}". Original exception: {exc}')
+        raise MissingFrameException(400, f'No data found for the given area of interest {wkt}')
     else:
-        return _get_westmost_file_store_for_wkt(bucket=bucket, wkt=wkt, polarization=polarization, flight_direction=flight_direction)
+        return _get_westmost_file_store_for_wkt(
+            bucket=bucket, wkt=wkt, polarization=polarization, flight_direction=flight_direction
+        )
 
-def _get_westmost_file_store_for_wkt(bucket: str, wkt: str, polarization: str, flight_direction: str):
+
+def _get_westmost_file_store_for_wkt(
+    bucket: str, wkt: str, polarization: str, flight_direction: str
+):
     # example:
     # s3://asf-cumulus-test-opera-products/OPERA_L3_DISP-S1_STACK_V1/OPERA_L3_DISP-S1_IW_F44328_VV_V1/OPERA_L3_DISP-S1_IW_F44328_VV_short_wavelength_displacement.zarr.json.gz
 
@@ -162,21 +181,23 @@ def _get_westmost_file_store_for_wkt(bucket: str, wkt: str, polarization: str, f
             if s3.exists(store):
                 available_zarr_stores.append(store)
         except Exception as exc:
-            logging.debug(f'Failed to open store "{store}". Original exception: {exc}')
+            api_logger.debug(f'Failed to open store "{store}". Original exception: {exc}')
 
     if len(available_zarr_stores) == 0:
-        raise MissingFrameException(
-            400, f'No data found for the given area of interest {wkt}'
-        )
+        raise MissingFrameException(400, f'No data found for the given area of interest {wkt}')
 
-    return available_zarr_stores[0] if flight_direction.upper() == 'DESCENDING' else available_zarr_stores[-1]
+    return (
+        available_zarr_stores[0]
+        if flight_direction.upper() == 'DESCENDING'
+        else available_zarr_stores[-1]
+    )
 
 
 def _get_frames_for_wkt(wkt: str, flight_direction: str) -> list[str]:
     frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
     geometry = shapely_wkt.loads(wkt)
     gdf = gpd.read_file(frame_path, engine='pyogrio')
-    result = gdf[gdf.orbit_direction==flight_direction][gdf.intersects(geometry)]
+    result = gdf[gdf.orbit_direction == flight_direction][gdf.intersects(geometry)]
     result['west_most_point'] = result.geometry.bounds.minx
     result.sort_values(by='west_most_point', ascending=flight_direction == 'DESCENDING')
 
@@ -190,11 +211,12 @@ def _get_frames_for_wkt(wkt: str, flight_direction: str) -> list[str]:
 
     return [_pad_frame_str(frame) for frame in frame_ids]
 
+
 def _pad_frame_str(frame: int):
     frame_str = str(frame)
 
     # append leading zeros
     if len(frame_str) < 5:
-        frame_str = ('0'*(5-len(frame_str))) + frame_str
+        frame_str = ('0' * (5 - len(frame_str))) + frame_str
 
     return frame_str
