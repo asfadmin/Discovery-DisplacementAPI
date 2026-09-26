@@ -1,23 +1,21 @@
 # import rasterio
+import re
 from datetime import datetime, timedelta
-from fastapi import HTTPException
+from time import perf_counter
+
 import fsspec
 import fsspec.config
 import numpy as np
-from shapely import LineString, Point, Polygon
-from src.HDF.data_reader import open_zarr_store, get_crs
-from pyproj import CRS, Transformer
-import xarray as xr
-from src.constants import fsspec_params
-from shapely.ops import transform as shapely_transform
-from shapely.geometry.base import BaseGeometry
-import geopandas as gpd
 import pandas
-import re
+import xarray as xr
+from pyproj import CRS, Transformer
+from shapely import Point
+from shapely.geometry.base import BaseGeometry
+
 from src import api_logger
-from time import perf_counter
-from fsspec.implementations.cached import SimpleCacheFileSystem
-from src.exceptions import OutdatedStackException, NaNAOIException
+from src.constants import fsspec_params
+from src.exceptions import NaNAOIException, OutdatedStackException
+from src.HDF.data_reader import get_crs, open_zarr_store
 
 _data_variables = [
     'netcdf_uri',

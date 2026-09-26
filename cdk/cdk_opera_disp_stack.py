@@ -8,8 +8,6 @@ from aws_cdk import (
     aws_logs as logs,
     aws_ec2 as ec2,
     aws_iam as iam,
-    aws_efs as efs,
-    RemovalPolicy,
 )
 from constructs import Construct
 

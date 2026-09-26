@@ -1,4 +1,3 @@
-import fsspec
 import rasterio
 import xarray as xr
 

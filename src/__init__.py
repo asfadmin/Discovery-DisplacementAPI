@@ -13,4 +13,4 @@ from . import (
     models,  # noqa: F401
 )
 from .constants import Polarizations, fsspec_params  # noqa: F401
-from .exceptions import MissingFrameException, OutdatedStackException, NaNAOIException  # noqa: F401
+from .exceptions import MissingFrameException, NaNAOIException, OutdatedStackException  # noqa: F401
