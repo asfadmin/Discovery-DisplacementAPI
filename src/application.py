@@ -7,12 +7,11 @@ from fastapi import APIRouter, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from shapely import GEOSException, convex_hull
+from shapely import GEOSException
 from shapely import wkt as shapely_wkt
-from shapely.geometry.base import BaseGeometry
 
 from src import api_logger
-from src.exceptions import MissingFrameException
+from src.exceptions import MissingFrameException, NaNAOIException, OutdatedStackException
 from src.models import (
     GetFramesModel,
     TimeSeriesModel,
@@ -61,10 +60,10 @@ def get_timeseries(series: TimeSeriesModel):
         raise HTTPException(
             400, detail=f'Failed to load provided wkt string. Original Error: {exc}'
         )
-    if geometry.geom_type not in ['Polygon', 'Point']:
+    if geometry.geom_type != 'Point':
         raise HTTPException(
             400,
-            detail=f'Failed to load provided wkt. Must be "POLYGON" or "POINT", got {geometry.geom_type.upper()}',
+            detail=f'Failed to load provided wkt. Must be "POINT", got {geometry.geom_type.upper()}',
         )
 
     api_logger.debug(f'wkt loaded: {geometry.wkt}')
@@ -83,6 +82,10 @@ def get_timeseries(series: TimeSeriesModel):
         output_str = get_timeseries_over_aoi(
             geometry=geometry,
             file_store=file_store,
+        )
+    except (NaNAOIException, OutdatedStackException) as exc:
+        raise HTTPException(
+            400, detail=f'No data available for provided aoi. Original Exception: {exc}'
         )
     except BaseException as exc:
         raise HTTPException(
@@ -107,34 +110,34 @@ def get_frame_ids(wkt_event: GetFramesModel):
     )
 
 
-@app.post(
-    '/frame_intersection',
-    description='Returns the frame ids for a given aoi, splitting any cross frames',
-)
-def frame_intersection(wkt_event: GetFramesModel):
-    wkt = wkt_event.wkt
-    flight_direction = wkt_event.flightDirection
-    overlapping_frames = _get_frames_for_wkt(wkt, flight_direction)
-    frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
-    geometry = shapely_wkt.loads(wkt_event.wkt)
-    gdf = gpd.read_file(frame_path, engine='pyogrio')
-    frames: gpd.GeoDataFrame = gdf[gdf['frame_id'].isin([int(p) for p in overlapping_frames])]
-    intersection = frames.intersection(geometry)
-    return JSONResponse(
-        {
-            _pad_frame_str(frame_id): _simplify_multipolygons(geom).wkt
-            for frame_id, geom in zip(gdf.iloc[intersection.index]['frame_id'], intersection)
-        },
-        headers=DEFAULT_HEADERS,
-    )
+# @app.post(
+#     '/frame_intersection',
+#     description='Returns the frame ids for a given aoi, splitting any cross frames',
+# )
+# def frame_intersection(wkt_event: GetFramesModel):
+#     wkt = wkt_event.wkt
+#     flight_direction = wkt_event.flightDirection
+#     overlapping_frames = _get_frames_for_wkt(wkt, flight_direction)
+#     frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
+#     geometry = shapely_wkt.loads(wkt_event.wkt)
+#     gdf = gpd.read_file(frame_path, engine='pyogrio')
+#     frames: gpd.GeoDataFrame = gdf[gdf['frame_id'].isin([int(p) for p in overlapping_frames])]
+#     intersection = frames.intersection(geometry)
+#     return JSONResponse(
+#         {
+#             _pad_frame_str(frame_id): _simplify_multipolygons(geom).wkt
+#             for frame_id, geom in zip(gdf.iloc[intersection.index]['frame_id'], intersection)
+#         },
+#         headers=DEFAULT_HEADERS,
+#     )
 
 
-def _simplify_multipolygons(geometry: BaseGeometry) -> BaseGeometry:
-    """In case polygon intersects different sections of frame at once and get multi-polygon (swath corners for example), perform convex hull instead"""
-    if geometry.geom_type == 'MultiPolygon':
-        geometry = convex_hull(geometry)
+# def _simplify_multipolygons(geometry: BaseGeometry) -> BaseGeometry:
+#     """In case polygon intersects different sections of frame at once and get multi-polygon (swath corners for example), perform convex hull instead"""
+#     if geometry.geom_type == 'MultiPolygon':
+#         geometry = convex_hull(geometry)
 
-    return geometry
+#     return geometry
 
 
 def _get_file_store_for_wkt(bucket: str, frame_id: str, polarization: str):

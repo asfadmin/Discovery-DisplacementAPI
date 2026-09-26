@@ -1,5 +1,6 @@
 import os
 import pathlib
+import urllib.parse
 
 import yaml
 from fastapi.testclient import TestClient
@@ -10,20 +11,32 @@ timeseries_endpoint = '/timeseries'
 client = TestClient(app)
 
 
-def test_timeseries(**args) -> None:
+def _query_api(endpoint: str, params: dict, method: str):
+    match method:
+        case 'GET':
+            p = urllib.parse.urlencode(params)
+            return client.get(url=f'{endpoint}?{p}')
+        case 'POST':
+            return client.post(url=f'{endpoint}', json=params)
+        case _:
+            raise NotImplementedError(f'Method {method} not implemented')
+
+
+def test_endpoints(**args) -> None:
     test_info = args['test_info']
     params = test_info['params']
     expected_response = test_info['response']
+    endpoint = test_info['endpoint']
+    method = test_info['method']
 
     status_code = expected_response['status_code']
 
-    response = client.post(url=f'{timeseries_endpoint}', json=params)
-
+    response = _query_api(endpoint, params, method)
     if status_code == 200:
         try:
             response.raise_for_status()
         except BaseException as exc:
-            raise Exception(f'timeseries endpoint failed. Reason: {exc}')
+            raise Exception(f'{endpoint} endpoint failed. Reason: {exc}')
     else:
         assert response.status_code == status_code, (
             f'Expected error code {status_code}, got response code {response.status_code}, "{response.text}"'

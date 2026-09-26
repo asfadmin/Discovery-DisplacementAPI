@@ -1,7 +1,6 @@
 # Contents of pytest-config.yml
 test_types:
-
-- For running Timeseries tests:
-    required_in_title: timeseries
-    required_keys: ["params", "response"]
-    method: test_timeseries
+  - For running API Endpoint tests:
+      required_in_title: endpoint
+      required_keys: ["endpoint", "method", "params", "response"]
+      method: test_endpoints

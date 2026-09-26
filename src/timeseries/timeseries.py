@@ -17,7 +17,7 @@ import re
 from src import api_logger
 from time import perf_counter
 from fsspec.implementations.cached import SimpleCacheFileSystem
-from src.exceptions import OutdatedStackException
+from src.exceptions import OutdatedStackException, NaNAOIException
 
 _data_variables = [
     'netcdf_uri',
@@ -84,7 +84,7 @@ def get_timeseries_over_aoi(
 
     if post_filter_count == 0:
         raise OutdatedStackException(
-            status_code=502,
+            status_code=400,
             detail=f'No V1.0+ products found in stack "{file_store.split("/")[-1]}"',
         )
 
@@ -95,8 +95,8 @@ def get_timeseries_over_aoi(
     start = perf_counter()
     if isinstance(geometry, Point):
         values = _read_layers_at_pixel(values, lon=geometry.x, lat=geometry.y)
-    elif isinstance(geometry, Polygon) or isinstance(geometry, LineString):
-        values = _read_layers_with_aoi(values, geometry)
+    # elif isinstance(geometry, Polygon) or isinstance(geometry, LineString):
+    #     values = _read_layers_with_aoi(values, geometry)
     api_logger.info(f'AOI Read Speed: {perf_counter() - start} seconds')
     return _pandas_output(values, wkt=geometry.wkt)
 
@@ -126,35 +126,40 @@ def _read_layers_at_pixel(dataset: xr.Dataset, lat: float, lon: float) -> xr.Dat
     return dataset[_data_variables].isel(x=xx_index, y=yy_index)
 
 
-def _read_layers_with_aoi(dataset: xr.Dataset, geometry: BaseGeometry):
-    """
-    Read a spatial subset from the stack with a reprojection of the provided geometry
-    Returns the average values for each aoi at each timestep
-    """
-    crs = get_crs(dataset)
-    epsg = crs.to_epsg()
+# Saving this functionality for polygons in future
+# def _read_layers_with_aoi(dataset: xr.Dataset, geometry: BaseGeometry):
+#     """
+#     Read a spatial subset from the stack with a reprojection of the provided geometry
+#     Returns the average values for each aoi at each timestep
+#     """
+#     crs = get_crs(dataset)
+#     epsg = crs.to_epsg()
 
-    projected = _transform_geometry(geometry=geometry, target_proj=epsg)
+#     projected = _transform_geometry(geometry=geometry, target_proj=epsg)
 
-    dataset.rio.set_spatial_dims(x_dim='x', y_dim='y', inplace=True)
-    dataset.rio.write_crs(str(crs), inplace=True)
+#     dataset.rio.set_spatial_dims(x_dim='x', y_dim='y', inplace=True)
+#     dataset.rio.write_crs(str(crs), inplace=True)
 
-    d = {'col1': ['aoi'], 'geometry': [projected]}
-    gdf = gpd.GeoDataFrame(d, crs=str(epsg))  # type: ignore
+#     d = {'col1': ['aoi'], 'geometry': [projected]}
+#     gdf = gpd.GeoDataFrame(d, crs=str(epsg))  # type: ignore
 
-    # clip_box limits the clipped geometry to the aoi bounds,
-    # otherwise rioxarray will load THE ENTIRE DATASET FOOTPRINT into memory.
-    # Not a perfect solution, as any shape that isn't perfectly aligned with
-    # bounding dimensions will lead to more remote reads than necessary
-    # ex: the trianges between a bounding box and a rotated square will be
-    # loaded by `clip()`
+#     # clip_box limits the clipped geometry to the aoi bounds,
+#     # otherwise rioxarray will load THE ENTIRE DATASET FOOTPRINT into memory.
+#     # Not a perfect solution, as any shape that isn't perfectly aligned with
+#     # bounding dimensions will lead to more remote reads than necessary
+#     # ex: the trianges between a bounding box and a rotated square will be
+#     # loaded by `clip()`
 
-    # TODO: Explore opening only one frame, clipping it, then use those
-    # indexes to read the remaining timesteps without loading the extra data
-    # (assuming all data in uniformly alligned over a frame id, which should be the case)
-    clipped_box = dataset.rio.clip_box(*projected.bounds)
-    output = clipped_box.rio.clip(gdf.geometry.values, gdf.crs, drop=True)
-    return output.mean(['x', 'y'])
+#     # TODO: Explore opening only one frame, clipping it, then use those
+#     # indexes to read the remaining timesteps without loading the extra data
+#     # (assuming all data in uniformly alligned over a frame id, which should be the case)
+#     clipped_box = dataset.rio.clip_box(*projected.bounds)
+#     output = clipped_box.rio.clip(gdf.geometry.values, gdf.crs, drop=True)
+#     return output.mean(['x', 'y'])
+#
+# def _transform_geometry(geometry: BaseGeometry, source_proj='4326', target_proj='32610'):
+#     project = Transformer.from_crs(source_proj, target_proj, always_xy=True).transform
+#     return shapely_transform(project, geometry)
 
 
 def _to_crs(lat: float, lon: float, source_proj='4326', target_proj='32610'):
@@ -163,15 +168,6 @@ def _to_crs(lat: float, lon: float, source_proj='4326', target_proj='32610'):
 
     source_to_target = Transformer.from_crs(source_crs, target_crs)
     return source_to_target.transform(lat, lon)
-
-
-def _transform_geometry(geometry: BaseGeometry, source_proj='4326', target_proj='32610'):
-    project = Transformer.from_crs(source_proj, target_proj, always_xy=True).transform
-    return shapely_transform(project, geometry)
-
-
-# def _drop_min_version(data: xr.Dataset):
-#     return data.where(lambda scene: float(scene.product_version[1:]) >= 0.9)
 
 
 def _calc_temporal_offsets(data: xr.Dataset):
@@ -225,9 +221,11 @@ def _pandas_output(data: xr.Dataset, wkt: str):
     nans = pandas_values['short_wavelength_displacement'].isna()
 
     if len(pandas_values[~nans]) == 0:
-        raise HTTPException(400, detail=f'No data exists for wkt "{wkt}"')
-    
-    pandas_values['short_wavelength_displacement'] = pandas_values['short_wavelength_displacement'].fillna(0)
+        raise NaNAOIException(400, detail=f'No data exists for wkt "{wkt}"')
+
+    pandas_values['short_wavelength_displacement'] = pandas_values[
+        'short_wavelength_displacement'
+    ].fillna(0)
     pandas_values = _fix_rolling_reference(pandas_values)
 
     pandas_values = pandas_values.reset_index().set_index('source_file_name')

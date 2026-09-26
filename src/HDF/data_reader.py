@@ -20,32 +20,6 @@ def open_zarr_store(file_system: S3FileSystem, group='/') -> xr.Dataset:
     )
 
 
-def get_bounding_polygon(file_uri: str):
-    fs = fsspec.filesystem(
-        'reference',
-        fo=file_uri,
-        remote_protocol='s3',
-        compression='gzip',
-        remote_options={'anon': False},
-        # One line required to specify compression here
-        target_options={'compression': 'gzip'},
-    )
-    identity = xr.open_dataset(
-        fs.get_mapper(), engine='zarr', consolidated=False, group='identification'
-    )
-    return identity['bounding_polygon'][0].item().decode()
-
-
-def get_wkt_from_dataset(
-    data: xr.Dataset | xr.DataArray, identification: xr.Dataset | xr.DataArray
-):
-    wkt = str(identification.variables['bounding_polygon'].data)
-    epsg = str(get_crs(data).to_epsg())
-    api_logger.debug(msg=f'Got epsg {epsg} from crs')
-
-    return {'wkt': wkt, 'epsg': epsg}
-
-
 def get_crs(data):
     api_logger.debug(msg='Reading crs')
     spatial_ref = data.variables['spatial_ref']
