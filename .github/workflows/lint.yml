@@ -1,14 +1,16 @@
 name: Lint
 
-on: 
+on:
     pull_request:
         types: [opened, edited, reopened]
     push:
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
+    lint:
+        runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: chartboost/ruff-action@v1
+        steps:
+            - uses: actions/checkout@v4
+            - uses: astral-sh/ruff-action@v4.1.0
+              with:
+                  args: "format --check --diff"

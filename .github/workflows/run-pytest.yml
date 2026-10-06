@@ -3,6 +3,8 @@ name: tests
 on:
     pull_request:
         branches: test
+        paths:
+            - "**.py"
 jobs:
     run-tests:
         runs-on: ubuntu-latest
