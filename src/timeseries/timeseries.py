@@ -1,4 +1,5 @@
 # import rasterio
+from shapely.geometry import Polygon
 import re
 from datetime import datetime, timedelta
 from time import perf_counter
@@ -29,6 +30,7 @@ _data_variables = [
 
 def get_timeseries_over_aoi(
     geometry: BaseGeometry,
+    wrapped_geometry: BaseGeometry,
     file_store: str,
 ) -> str:
     start = perf_counter()
@@ -91,9 +93,9 @@ def get_timeseries_over_aoi(
     api_logger.info(f'Temporal Offset calc: {perf_counter() - start} seconds')
 
     start = perf_counter()
-    if isinstance(geometry, Point):
-        values = _read_layers_at_pixel(values, lon=geometry.x, lat=geometry.y)
-    # elif isinstance(geometry, Polygon) or isinstance(geometry, LineString):
+    if isinstance(wrapped_geometry, Point):
+        values = _read_layers_at_pixel(values, lon=wrapped_geometry.x, lat=wrapped_geometry.y)
+    # elif isinstance(geometry, Polygon):
     #     values = _read_layers_with_aoi(values, geometry)
     api_logger.info(f'AOI Read Speed: {perf_counter() - start} seconds')
     return _pandas_output(values, wkt=geometry.wkt)
@@ -152,9 +154,19 @@ def _read_layers_at_pixel(dataset: xr.Dataset, lat: float, lon: float) -> xr.Dat
 #     # indexes to read the remaining timesteps without loading the extra data
 #     # (assuming all data in uniformly alligned over a frame id, which should be the case)
 #     clipped_box = dataset.rio.clip_box(*projected.bounds)
-#     output = clipped_box.rio.clip(gdf.geometry.values, gdf.crs, drop=True)
-#     return output.mean(['x', 'y'])
-#
+#     ds = clipped_box.rio.clip(gdf.geometry.values, gdf.crs, drop=False)
+#     for v in list(ds.coords.keys()):
+#         if ds.coords[v].dtype == object:
+#             ds.coords[v] = ds.coords[v].astype('unicode')
+
+#     for v in list(ds.variables.keys()):
+#         if ds[v].dtype == object:
+#             ds[v] = ds[v].astype('unicode')
+#     # ds.to_zarr('tests/zarr_test_store/', mode='w', consolidated=False)
+
+#     return ds.mean(['x', 'y'])
+
+
 # def _transform_geometry(geometry: BaseGeometry, source_proj='4326', target_proj='32610'):
 #     project = Transformer.from_crs(source_proj, target_proj, always_xy=True).transform
 #     return shapely_transform(project, geometry)

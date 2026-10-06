@@ -1,0 +1,22 @@
+name: tests against uat
+
+on:
+    pull_request:
+        branches: prod
+
+jobs:
+    run-tests:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+            - uses: actions/setup-python@v6
+              with:
+                  python-version: "3.13"
+            - name: Install Dependencies
+              run: |
+                  python3 -m pip install --upgrade pip
+                  python3 -m pip install -r src/requirements.txt
+                  python3 -m pip install -r tests/requirements.txt
+
+            - name: Run Tests
+              run: python3 -m pytest tests/yml_tests/test_authorized.yml

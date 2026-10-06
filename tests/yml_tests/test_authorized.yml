@@ -1,0 +1,54 @@
+tests:
+  - test /timeseries endpoint ridgecrest CA quake ASCENDING:
+      endpoint: "/timeseries"
+      method: POST
+      params:
+        bucket: asf-cumulus-prod-opera-products
+        wkt: POINT(-117.69124803858051 35.84163695732987)
+        flightDirection: ASCENDING
+      response:
+        status_code: 200
+        expected_output: ridgecrest_ca_quake_ascending.yml
+
+  - test /timeseries endpoint ridgecrest CA quake ASCENDING WRAPPED:
+      endpoint: "/timeseries"
+      method: POST
+      params:
+        bucket: asf-cumulus-prod-opera-products
+        wkt: POINT(242.3087519614195 35.84163695732987)
+        flightDirection: ASCENDING
+      response:
+        status_code: 200
+        expected_output: ridgecrest_ca_quake_ascending.yml
+
+  - test /timeseries endpoint ridgecrest CA quake DESCENDING:
+      endpoint: "/timeseries"
+      method: POST
+      params:
+        bucket: asf-cumulus-prod-opera-products
+        wkt: POINT(-117.69124803858051 35.84163695732987)
+        flightDirection: DESCENDING
+      response:
+        status_code: 200
+        expected_output: ridgecrest_ca_quake_descending.yml
+
+  - test /timeseries endpoint ridgecrest CA quake DESCENDING valid FrameID:
+      endpoint: "/timeseries"
+      method: POST
+      params:
+        bucket: asf-cumulus-prod-opera-products
+        wkt: POINT(-117.69124803858051 35.84163695732987)
+        frameId: "18902"
+        flightDirection: DESCENDING
+      response:
+        status_code: 200
+        expected_output: ridgecrest_ca_quake_descending.yml
+
+  - test /timeseries endpoint no data at AOI (but stack exists):
+      endpoint: "/timeseries"
+      method: POST
+      params:
+        bucket: "asf-cumulus-prod-opera-products"
+        wkt: POINT(-140.44342731207757 69.67051520034892)
+      response:
+        status_code: 400

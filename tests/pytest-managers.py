@@ -3,21 +3,32 @@ import pathlib
 import urllib.parse
 
 import yaml
+import httpx2
+
 from fastapi.testclient import TestClient
 
 from src.application import app, _wrap_wkt
 
 timeseries_endpoint = '/timeseries'
 client = TestClient(app)
+uat_endpoint = 'https://d2qmcvu7qty7vn.cloudfront.net'
 
 
-def _query_api(endpoint: str, params: dict, method: str):
+def _query_api(endpoint: str, params: dict, method: str, use_uat: bool):
     match method:
         case 'GET':
             p = urllib.parse.urlencode(params)
-            return client.get(url=f'{endpoint}?{p}')
+            return (
+                httpx2.get(f'{uat_endpoint}{endpoint}?{p}', timeout=30)
+                if use_uat
+                else client.get(url=f'{endpoint}?{p}')
+            )
         case 'POST':
-            return client.post(url=f'{endpoint}', json=params)
+            return (
+                httpx2.post(f'{uat_endpoint}{endpoint}', json=params, timeout=30)
+                if use_uat
+                else client.post(url=f'{endpoint}', json=params)
+            )
         case _:
             raise NotImplementedError(f'Method {method} not implemented')
 
@@ -42,10 +53,11 @@ def test_endpoints(**args) -> None:
     expected_response = test_info['response']
     endpoint = test_info['endpoint']
     method = test_info['method']
+    use_uat = args['config'].getoption('use_uat')
 
     status_code = expected_response['status_code']
 
-    response = _query_api(endpoint, params, method)
+    response = _query_api(endpoint, params, method, use_uat)
     if status_code == 200:
         try:
             response.raise_for_status()
