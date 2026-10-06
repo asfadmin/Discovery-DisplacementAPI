@@ -1,5 +1,4 @@
 # import rasterio
-from shapely.geometry import Polygon
 import re
 from datetime import datetime, timedelta
 from time import perf_counter
