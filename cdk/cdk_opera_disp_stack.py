@@ -3,11 +3,21 @@ import json
 from aws_cdk import (
     Duration,
     Stack,
+)
+from aws_cdk import (
     aws_apigateway as apigateway,
-    aws_lambda as _lambda,
-    aws_logs as logs,
+)
+from aws_cdk import (
     aws_ec2 as ec2,
+)
+from aws_cdk import (
     aws_iam as iam,
+)
+from aws_cdk import (
+    aws_lambda as _lambda,
+)
+from aws_cdk import (
+    aws_logs as logs,
 )
 from constructs import Construct
 
@@ -44,7 +54,6 @@ class CdkOperaDispStack(Stack):
                 'vpc_subnets': subnet_selection,
                 'security_groups': [security_group],
             }
-            
 
             apigateway_kwargs = {
                 'endpoint_configuration': apigateway.EndpointConfiguration(
@@ -74,8 +83,6 @@ class CdkOperaDispStack(Stack):
             #     # enforce the POSIX identity so lambda function will access with this identity
             #     posix_user=efs.PosixUser(uid="1001", gid="1001"),
             # )
-        
-        
 
         dockerfileDir = '../'
         self.opera_timeseries_function = _lambda.DockerImageFunction(
@@ -93,7 +100,6 @@ class CdkOperaDispStack(Stack):
             # ) if self.access_point else None,
             **lambda_vpc_kwargs,
         )
-
 
         self.opera_timeseries_function.add_to_role_policy(
             iam.PolicyStatement(
@@ -136,7 +142,7 @@ class CdkOperaDispStack(Stack):
                         'DispServiceApiLogGroup',
                         retention=logs.RetentionDays.THREE_MONTHS,
                     )
-                ), # type: ignore
+                ),  # type: ignore
                 access_log_format=apigateway.AccessLogFormat.custom(
                     json.dumps(
                         {
