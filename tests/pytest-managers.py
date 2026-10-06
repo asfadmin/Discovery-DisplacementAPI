@@ -2,12 +2,11 @@ import os
 import pathlib
 import urllib.parse
 
-import yaml
 import httpx2
-
+import yaml
 from fastapi.testclient import TestClient
 
-from src.application import app, _wrap_wkt
+from src.application import _wrap_wkt, app
 
 timeseries_endpoint = '/timeseries'
 client = TestClient(app)
@@ -59,10 +58,7 @@ def test_endpoints(**args) -> None:
 
     response = _query_api(endpoint, params, method, use_uat)
     if status_code == 200:
-        try:
-            response.raise_for_status()
-        except BaseException as exc:
-            raise Exception(f'{endpoint} endpoint failed. Reason: {exc}')
+        response.raise_for_status()
     else:
         assert response.status_code == status_code, (
             f'Expected error code {status_code}, got response code {response.status_code}, "{response.text}"'
@@ -87,9 +83,9 @@ def _get_resource(yml_file):
                     return yaml.safe_load(f)
                 except yaml.YAMLError as exc:
                     print(exc)
-    elif isinstance(yml_file, list):  # check if it's a list of yml files
-        if len(yml_file) > 0:
-            if isinstance(yml_file[0], str):
+    elif isinstance(yml_file, list):  # noqa: SIM102  # check if it's a list of yml files
+        if len(yml_file) > 0:  # noqa: SIM102
+            if isinstance(yml_file[0], str):  # noqa: SIM102
                 if yml_file[0].endswith(('.yml', '.yaml')):
                     return [_get_resource(file) for file in yml_file]
 

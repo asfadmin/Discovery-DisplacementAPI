@@ -39,7 +39,7 @@ def get_timeseries_over_aoi(
             'reference',
             fo=file_store,
             remote_protocol='s3',
-            target_options=dict(compression='gzip'),
+            target_options={'compression': 'gzip'},
             remote_options={
                 'anon': False,
                 'default_fill_cache': False,
@@ -65,7 +65,7 @@ def get_timeseries_over_aoi(
 
     except Exception as exc:
         api_logger.error(f'Failed to open file. Original Error: {exc}')
-        raise exc
+        raise
     api_logger.info(f's3fs filesystem creation: {perf_counter() - start} seconds')
 
     start = perf_counter()

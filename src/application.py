@@ -90,7 +90,7 @@ def get_timeseries(series: TimeSeriesModel):
         raise HTTPException(
             400, detail=f'No data available for provided aoi. Original Exception: {exc}'
         )
-    except BaseException as exc:
+    except BaseException as exc:  # noqa: BLE001
         raise HTTPException(
             500, detail=f'Failed to calculate timeseries. Original Exception: {exc}'
         )
@@ -159,7 +159,7 @@ def _get_zarr_store_uri(
         try:
             if s3.exists(zarr_store):
                 return zarr_store
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             api_logger.debug(f'Failed to open store "{zarr_store}". Original exception: {exc}')
         raise MissingFrameException(400, f'No data found for the given area of interest {wkt}')
     else:
@@ -186,7 +186,7 @@ def _get_westmost_file_store_for_wkt(
         try:
             if s3.exists(store):
                 available_zarr_stores.append(store)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             api_logger.debug(f'Failed to open store "{store}". Original exception: {exc}')
 
     if len(available_zarr_stores) == 0:
