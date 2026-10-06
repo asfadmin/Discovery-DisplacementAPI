@@ -18,7 +18,7 @@ jobs:
                   python3 -m pip install -r tests/requirements.txt
 
             - name: Run Tests
-              run: python3 -m pytest --ignore=tests/yml_tests/test_authorized .
+              run: python3 -m pytest --dont-run-file tests/yml_tests/test_authorized .
 
             # - name: Upload coverage to Codecov
             #   uses: codecov/codecov-action@v5
