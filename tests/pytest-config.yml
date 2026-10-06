@@ -4,3 +4,8 @@ test_types:
       required_in_title: endpoint
       required_keys: ["endpoint", "method", "params", "response"]
       method: test_endpoints
+
+  - For running wkt wrapping tests:
+      required_in_title: _wrap_wkt
+      required_keys: ["wkt", "wrapped"]
+      method: test_wkt_wrapping

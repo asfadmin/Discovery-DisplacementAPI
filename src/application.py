@@ -1,3 +1,5 @@
+from shapely.ops import transform
+from shapely.geometry.base import BaseGeometry
 from pathlib import Path
 from time import perf_counter
 
@@ -55,12 +57,12 @@ def get_timeseries(series: TimeSeriesModel):
     # )
     start = perf_counter()
     try:
-        geometry = shapely_wkt.loads(series.wkt)
+        geometry, wrapped_geometry = _wrap_wkt(series.wkt)
     except GEOSException as exc:
         raise HTTPException(
             400, detail=f'Failed to load provided wkt string. Original Error: {exc}'
         )
-    if geometry.geom_type != 'Point':
+    if geometry.geom_type != 'Point' and geometry.geom_type != 'Polygon':
         raise HTTPException(
             400,
             detail=f'Failed to load provided wkt. Must be "POINT", got {geometry.geom_type.upper()}',
@@ -70,7 +72,7 @@ def get_timeseries(series: TimeSeriesModel):
 
     file_store = _get_zarr_store_uri(
         bucket=series.bucket,
-        wkt=series.wkt,
+        wkt=wrapped_geometry.wkt,
         frame_id=series.frameId,
         polarization=series.polarization.value,
         flight_direction=series.flightDirection,
@@ -81,6 +83,7 @@ def get_timeseries(series: TimeSeriesModel):
     try:
         output_str = get_timeseries_over_aoi(
             geometry=geometry,
+            wrapped_geometry=wrapped_geometry,
             file_store=file_store,
         )
     except (NaNAOIException, OutdatedStackException) as exc:
@@ -223,3 +226,16 @@ def _pad_frame_str(frame: int):
         frame_str = ('0' * (5 - len(frame_str))) + frame_str
 
     return frame_str
+
+
+def _wrap_wkt(wkt: str) -> tuple[BaseGeometry, BaseGeometry]:
+    geometry = shapely_wkt.loads(wkt)
+    wrapped = transform(_wrap_lon, geometry)
+    return geometry, wrapped
+
+
+def _wrap_lon(x, y, z=None):
+    if abs(x) > 180:
+        x = (x + 180) % 360 - 180
+
+    return (x, y)

@@ -42,6 +42,17 @@ tests:
         status_code: 200
         expected_output: ridgecrest_ca_quake_ascending.yml
 
+  - test /timeseries endpoint ridgecrest CA quake ASCENDING WRAPPED:
+      endpoint: "/timeseries"
+      method: POST
+      params:
+        bucket: asf-cumulus-prod-opera-products
+        wkt: POINT(242.3087519614195 35.84163695732987)
+        flightDirection: ASCENDING
+      response:
+        status_code: 200
+        expected_output: ridgecrest_ca_quake_ascending.yml
+
   - test /timeseries endpoint ridgecrest CA quake DESCENDING:
       endpoint: "/timeseries"
       method: POST
@@ -119,6 +130,18 @@ tests:
         wkt: POINT (0 0)
       response:
         status_code: 400
+
+  - test _wrap_wkt wrapping positive:
+      wkt: POINT (242.3087519614195 35.84163695732987)
+      wrapped: POINT (-117.69124803858051 35.84163695732987)
+
+  - test _wrap_wkt wrapping negative:
+      wkt: POINT (-477.6912480385805 35.84163695732987)
+      wrapped: POINT (-117.69124803858051 35.84163695732987)
+
+  - test _wrap_wkt no wrapping:
+      wkt: POINT (-117.69124803858051 35.84163695732987)
+      wrapped: POINT (-117.69124803858051 35.84163695732987)
 
 # TODO: re-enable and update these tests for linestring/polygon aois
 # - test timeseries stack 14 files polygon in bounds:

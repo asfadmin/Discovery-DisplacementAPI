@@ -5,7 +5,7 @@ import urllib.parse
 import yaml
 from fastapi.testclient import TestClient
 
-from src.application import app
+from src.application import app, _wrap_wkt
 
 timeseries_endpoint = '/timeseries'
 client = TestClient(app)
@@ -20,6 +20,20 @@ def _query_api(endpoint: str, params: dict, method: str):
             return client.post(url=f'{endpoint}', json=params)
         case _:
             raise NotImplementedError(f'Method {method} not implemented')
+
+
+def test_wkt_wrapping(**args) -> None:
+    test_info = args['test_info']
+    wkt, wrapped = test_info['wkt'], test_info['wrapped']
+
+    actual, actual_wrapped = _wrap_wkt(wkt)
+
+    assert actual.wkt == wkt, (
+        f'Original geometry modified when unwrapping wkt. Expected wkt: {wkt}. Actual: {actual.wkt}'
+    )
+    assert actual_wrapped.wkt == wrapped, (
+        f'Failed to wrap wkt. Expected wkt: {wrapped}. Actual: {actual_wrapped}'
+    )
 
 
 def test_endpoints(**args) -> None:
