@@ -10,7 +10,7 @@ from src.application import _wrap_wkt, app
 
 timeseries_endpoint = '/timeseries'
 client = TestClient(app)
-uat_endpoint = 'https://d2qmcvu7qty7vn.cloudfront.net'
+uat_endpoint = 'https://d8itg4twhevb5.cloudfront.net'
 
 
 def _query_api(endpoint: str, params: dict, method: str, use_uat: bool):

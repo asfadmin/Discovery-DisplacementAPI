@@ -3,6 +3,8 @@ name: tests against uat
 on:
     pull_request:
         branches: prod
+        paths:
+            - "**.py"
 
 jobs:
     run-tests:
