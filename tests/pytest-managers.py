@@ -2,7 +2,7 @@ import os
 import pathlib
 import urllib.parse
 
-import httpx2
+import requests
 import yaml
 from fastapi.testclient import TestClient
 
@@ -18,13 +18,13 @@ def _query_api(endpoint: str, params: dict, method: str, use_uat: bool):
         case 'GET':
             p = urllib.parse.urlencode(params)
             return (
-                httpx2.get(f'{uat_endpoint}{endpoint}?{p}', timeout=30)
+                requests.get(f'{uat_endpoint}{endpoint}?{p}', timeout=30)
                 if use_uat
                 else client.get(url=f'{endpoint}?{p}')
             )
         case 'POST':
             return (
-                httpx2.post(f'{uat_endpoint}{endpoint}', json=params, timeout=30)
+                requests.post(f'{uat_endpoint}{endpoint}', json=params, timeout=30)
                 if use_uat
                 else client.post(url=f'{endpoint}', json=params)
             )

@@ -3,4 +3,4 @@ pytest-automation # for pytest managers and yaml tests
 PyYAML
 httpx2
 coverage
-# requests
+requests
