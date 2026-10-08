@@ -2,7 +2,8 @@
 import os
 
 import aws_cdk as cdk
-from cdk_fargate_opera_disp_stack import CdkFargateOperaDispStack
+
+# from cdk_fargate_opera_disp_stack import CdkFargateOperaDispStack
 from cdk_opera_disp_stack import CdkOperaDispStack
 
 app = cdk.App()
@@ -18,12 +19,12 @@ CdkOperaDispStack(
     deployment_environment='test',
 )
 
-CdkFargateOperaDispStack(
-    app,
-    env=env,
-    description='Displacement Timeseries Fargate Stack',
-    construct_id='CdkFargateOperaDispStack',
-    deployment_environment='test',
-)
+# CdkFargateOperaDispStack(
+#     app,
+#     env=env,
+#     description='Displacement Timeseries Fargate Stack',
+#     construct_id='CdkFargateOperaDispStack',
+#     deployment_environment='test',
+# )
 
 app.synth()
