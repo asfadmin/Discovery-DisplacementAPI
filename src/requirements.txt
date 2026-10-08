@@ -1,10 +1,10 @@
-uvicorn==0.28.0
-fastapi==0.110.0
+anyio==4.15
+fastapi==0.141
 zarr>=2.0.0,<3.0.0
 xarray==2025.01.2
 s3fs==2024.12.0
-numpy==1.26.4
-rasterio==1.3.9
+numpy==2
+rasterio==1.5.1
 h5netcdf
 python-json-logger==2.0.7
 debugpy

@@ -1,49 +1,68 @@
 import os
 import pathlib
-import requests
+import urllib.parse
+
+import httpx2
 import yaml
+from fastapi.testclient import TestClient
 
-local_url = 'http://127.0.0.1:8000'
+from src.application import _wrap_wkt, app
+
 timeseries_endpoint = '/timeseries'
+client = TestClient(app)
+uat_endpoint = 'https://d2qmcvu7qty7vn.cloudfront.net'
 
 
-def test_timeseries(**args) -> None:
+def _query_api(endpoint: str, params: dict, method: str, use_uat: bool):
+    match method:
+        case 'GET':
+            p = urllib.parse.urlencode(params)
+            return (
+                httpx2.get(f'{uat_endpoint}{endpoint}?{p}', timeout=30)
+                if use_uat
+                else client.get(url=f'{endpoint}?{p}')
+            )
+        case 'POST':
+            return (
+                httpx2.post(f'{uat_endpoint}{endpoint}', json=params, timeout=30)
+                if use_uat
+                else client.post(url=f'{endpoint}', json=params)
+            )
+        case _:
+            raise NotImplementedError(f'Method {method} not implemented')
+
+
+def test_wkt_wrapping(**args) -> None:
+    test_info = args['test_info']
+    wkt, wrapped = test_info['wkt'], test_info['wrapped']
+
+    actual, actual_wrapped = _wrap_wkt(wkt)
+
+    assert actual.wkt == wkt, (
+        f'Original geometry modified when unwrapping wkt. Expected wkt: {wkt}. Actual: {actual.wkt}'
+    )
+    assert actual_wrapped.wkt == wrapped, (
+        f'Failed to wrap wkt. Expected wkt: {wrapped}. Actual: {actual_wrapped}'
+    )
+
+
+def test_endpoints(**args) -> None:
     test_info = args['test_info']
     params = test_info['params']
     expected_response = test_info['response']
-
-    file_store = params['file_store']
-    wkt = params['wkt']
+    endpoint = test_info['endpoint']
+    method = test_info['method']
+    use_uat = args['config'].getoption('use_uat')
 
     status_code = expected_response['status_code']
 
-    fsspec_params = None
-    driver_keywords = None
-
-    if (fsspec_config := test_info.get('fsspec_params')) is not None:
-        fsspec_params = fsspec_config
-
-    if (driver_kwds := test_info.get('driver_keywords')) is not None:
-        driver_keywords = driver_kwds
-
-    test_data = {
-        'wkt': wkt,
-        'file_store': file_store,
-        'fsspec_params': fsspec_params,
-        'driver_keywords': driver_keywords,
-    }
-
-    response = requests.post(url=f'{local_url}{timeseries_endpoint}', json=test_data)
-
+    response = _query_api(endpoint, params, method, use_uat)
     if status_code == 200:
-        try:
-            response.raise_for_status()
-        except BaseException as exc:
-            raise Exception(f'timeseries endpoint failed. Reason: {exc}')
+        response.raise_for_status()
     else:
-        assert (
-            response.status_code == status_code
-        ), f'Expected error code {status_code}, got response code {response.status_code}, "{response.text}"'
+        assert response.status_code == status_code, (
+            f'Expected error code {status_code}, got response code {response.status_code}, "{response.text}"'
+        )
 
     expected_output = expected_response.get('expected_output')
 
@@ -64,9 +83,9 @@ def _get_resource(yml_file):
                     return yaml.safe_load(f)
                 except yaml.YAMLError as exc:
                     print(exc)
-    elif isinstance(yml_file, list):  # check if it's a list of yml files
-        if len(yml_file) > 0:
-            if isinstance(yml_file[0], str):
+    elif isinstance(yml_file, list):  # noqa: SIM102  # check if it's a list of yml files
+        if len(yml_file) > 0:  # noqa: SIM102
+            if isinstance(yml_file[0], str):  # noqa: SIM102
                 if yml_file[0].endswith(('.yml', '.yaml')):
                     return [_get_resource(file) for file in yml_file]
 

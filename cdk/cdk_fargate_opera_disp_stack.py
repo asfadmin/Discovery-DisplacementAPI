@@ -1,21 +1,11 @@
-import json
-
 from aws_cdk import (
     Stack,
-    aws_apigatewayv2 as apigatewayV2,
-    aws_logs as logs,
     aws_ec2 as ec2,
     aws_iam as iam,
     # aws_efs as efs,
-    aws_elasticloadbalancingv2 as elbv2,
     aws_ecs as ecs,
     aws_ecs_patterns as ecs_patterns,
     aws_ecr_assets as ecr_assets,
-    CfnOutput,
-    CfnResource,
-    aws_apigatewayv2_integrations,
-    aws_apigatewayv2_authorizers,
-    aws_apigateway,
 )
 from constructs import Construct
 
@@ -31,13 +21,13 @@ class CdkFargateOperaDispStack(Stack):
             vpc_id = self.node.try_get_context('vpc_id')
             subnet_ids = self.node.try_get_context('subnet_ids').split(',')
             security_group = self.node.try_get_context('security_group')
-            security_group_ids = security_group
+            _security_group_ids = security_group
             if not vpc_id:
                 raise AttributeError()
 
         except AttributeError:
             fargate_vpc_kwargs = {}
-            vpc_link_kwargs = {}
+            _vpc_link_kwargs = {}
         else:
             vpc = ec2.Vpc.from_lookup(self, 'EDCVPC', vpc_id=vpc_id)
             subnet_selection = ec2.SubnetSelection(
@@ -58,7 +48,7 @@ class CdkFargateOperaDispStack(Stack):
                 'security_groups': [security_group, service_sg],
             }
 
-            vpc_link_kwargs = {
+            _vpc_link_kwargs = {
                 'subnet_ids': subnet_ids,
                 # 'security_group_ids': [security_group_ids],
             }
@@ -142,7 +132,7 @@ class CdkFargateOperaDispStack(Stack):
             public_load_balancer=False,
             **fargate_vpc_kwargs,
         )
-        
+
         # self.nlb.add_security_group(security_group)
         # create custom VPC integration linking API Gateway to our private Fargate Load Balancer
         # AWS cdk docs not comprehensive on this workflow, example taken from here
@@ -212,7 +202,7 @@ class CdkFargateOperaDispStack(Stack):
         #     vpc_link= link,
         # )
         # )
-        
+
         # self.dispApi.root.add_proxy(
         #     default_integration=integration,
 
@@ -223,5 +213,3 @@ class CdkFargateOperaDispStack(Stack):
         #     'dispAPIUrl',
         #     value=self.nlb.load_balancer_dns_name,  # type: ignore
         # )
-
-        

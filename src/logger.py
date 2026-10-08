@@ -1,5 +1,6 @@
 import logging
 import os
+
 from pythonjsonlogger import jsonlogger
 
 
@@ -29,7 +30,7 @@ class ConsoleStreamFormatter(logging.Formatter):
 
     LOGGER_FORMAT = f'{Colors.BOLD}[ %(asctime)s (%(name)s) %(filename)s:%(lineno)d ] %(levelname)s - {Colors.BOLD_OFF}%(message)s'
 
-    FORMATS = {
+    FORMATS = {  # noqa: RUF012
         logging.DEBUG: Colors.OKBLUE + LOGGER_FORMAT + Colors.END,
         logging.INFO: Colors.OKCYAN + LOGGER_FORMAT + Colors.END,
         logging.WARNING: Colors.WARNING + LOGGER_FORMAT + Colors.END,
@@ -57,7 +58,7 @@ class AwsStreamFormatter(logging.Formatter):
     Custom Logger formatter, used when running this app in AWS
     """
 
-    LOGGER_FORMAT = ' '.join(
+    LOGGER_FORMAT = ' '.join(  # noqa: FLY002
         [
             '%(asctime)s',
             '%(name)s',
@@ -69,7 +70,7 @@ class AwsStreamFormatter(logging.Formatter):
         ]
     )
 
-    LOGGER_RENAME_FIELDS = {
+    LOGGER_RENAME_FIELDS = {  # noqa: RUF012
         'asctime': 'datetime',
         'lineno': 'line_number',
         'levelname': 'log_level',
