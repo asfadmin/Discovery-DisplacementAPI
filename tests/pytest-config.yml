@@ -1,7 +1,11 @@
 # Contents of pytest-config.yml
 test_types:
+  - For running API Endpoint tests:
+      required_in_title: endpoint
+      required_keys: ["endpoint", "method", "params", "response"]
+      method: test_endpoints
 
-- For running Timeseries tests:
-    required_in_title: timeseries
-    required_keys: ["params", "response"]
-    method: test_timeseries
+  - For running wkt wrapping tests:
+      required_in_title: _wrap_wkt
+      required_keys: ["wkt", "wrapped"]
+      method: test_wkt_wrapping
