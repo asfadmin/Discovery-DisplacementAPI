@@ -16,3 +16,4 @@ geopandas
 rioxarray
 dask<=2024.12.1
 kerchunk
+uvicorn
