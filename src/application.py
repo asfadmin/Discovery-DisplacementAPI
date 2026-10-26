@@ -47,7 +47,7 @@ class ReadLayer(BaseModel):
 
 @app.post(
     '/timeseries',
-    description='Returns a json response with values read at "unwrapped_phase", "interferometric_correlation", and "temporal_coherence" layers in provided files at given point',
+    description='Returns a json dictionary mapping netcdf4 file names to their sampled point value based off the given POINT wkt',
 )
 def get_timeseries(series: TimeSeriesModel):
     # # TODO: REMOVE BEFORE ANOTHER PRODUCTION RELEASE
