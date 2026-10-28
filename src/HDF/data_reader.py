@@ -1,7 +1,6 @@
 import rasterio
 import xarray as xr
 
-# from fsspec.implementations.local import S3FileSystem
 from s3fs.core import S3FileSystem
 
 from src import api_logger
