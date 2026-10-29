@@ -85,3 +85,8 @@ To run
 pytest --ignore=tests/yml_tests/test_authorized
 ```
 
+# Release Workflow
+
+The intended flow from pull request to release is:
+`feat/bug-branch`->`test`->`prod`
+

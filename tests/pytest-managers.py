@@ -38,12 +38,12 @@ def test_wkt_wrapping(**args) -> None:
 
     actual, actual_wrapped = _wrap_wkt(wkt)
 
-    assert actual.wkt == wkt, (
-        f'Original geometry modified when unwrapping wkt. Expected wkt: {wkt}. Actual: {actual.wkt}'
-    )
-    assert actual_wrapped.wkt == wrapped, (
-        f'Failed to wrap wkt. Expected wkt: {wrapped}. Actual: {actual_wrapped}'
-    )
+    assert (
+        actual.wkt == wkt
+    ), f'Original geometry modified when unwrapping wkt. Expected wkt: {wkt}. Actual: {actual.wkt}'
+    assert (
+        actual_wrapped.wkt == wrapped
+    ), f'Failed to wrap wkt. Expected wkt: {wrapped}. Actual: {actual_wrapped}'
 
 
 def test_endpoints(**args) -> None:
@@ -60,9 +60,9 @@ def test_endpoints(**args) -> None:
     if status_code == 200:
         response.raise_for_status()
     else:
-        assert response.status_code == status_code, (
-            f'Expected error code {status_code}, got response code {response.status_code}, "{response.text}"'
-        )
+        assert (
+            response.status_code == status_code
+        ), f'Expected error code {status_code}, got response code {response.status_code}, "{response.text}"'
 
     expected_output = expected_response.get('expected_output')
 
