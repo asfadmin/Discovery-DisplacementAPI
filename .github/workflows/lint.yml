@@ -6,8 +6,11 @@ on:
   push:
 
 jobs:
-  call-ruff-workflow:
-    # Docs: https://github.com/ASFHyP3/actions
-    uses: ASFHyP3/actions/.github/workflows/reusable-ruff.yml@v0.22.0
-    permissions:
-      contents: read
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v4.1.0
+      - run: ruff check --fix
+      - run: ruff format
