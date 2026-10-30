@@ -41,6 +41,8 @@ Returns a json timeseries, mapping file names to a sampled point's `short_wavele
     }
 }
 ```
+
+```
 params:
     wkt: str
         - A WKT POINT string
@@ -51,18 +53,21 @@ params:
     polarization: Polarizations = Polarizations.VV
     frameId: str | None = Field(None, pattern=r'^\d{5}$')
         - Overrides which frame to search
+```
 
 ### POST `/get_frame_id`
+```
 params:
     wkt: str
         - A WKT POINT string
     flightDirection: str
         - `ASCENDING` or `DESCENDING` pass
+```
 
 # Install and Run Locally
 Run pip install from the project's root folder
 ``` bash
-    pip install -r src/requirements.txt
+pip install -r src/requirements.txt
 ```
 
 
@@ -77,7 +82,7 @@ To run all tests locally valid AWS credentials are needed for accessing zarr ref
 
 To install test dependencies:
 ``` bash
-    pip install -r tests/requirements.txt
+pip install -r tests/requirements.txt
 ```
 
 To run
