@@ -47,14 +47,9 @@ class ReadLayer(BaseModel):
 
 @app.post(
     '/timeseries',
-    description='Returns a json response with values read at "unwrapped_phase", "interferometric_correlation", and "temporal_coherence" layers in provided files at given point',
+    description='Returns a json dictionary mapping netcdf4 file names to their sampled point value based off the given POINT wkt',
 )
 def get_timeseries(series: TimeSeriesModel):
-    # # TODO: REMOVE BEFORE ANOTHER PRODUCTION RELEASE
-    # return HTTPException(
-    #     status_code=400,
-    #     detail='The test displacement API is temporarily disabled due to unintended usage. For programmatic queries please access the zarr stack store `displacement` layer directly. For more info or questions please contact uso@asf.alaska.edu',
-    # )
     start = perf_counter()
     try:
         geometry, wrapped_geometry = _wrap_wkt(series.wkt)
@@ -111,36 +106,6 @@ def get_frame_ids(wkt_event: GetFramesModel):
         },
         headers=DEFAULT_HEADERS,
     )
-
-
-# @app.post(
-#     '/frame_intersection',
-#     description='Returns the frame ids for a given aoi, splitting any cross frames',
-# )
-# def frame_intersection(wkt_event: GetFramesModel):
-#     wkt = wkt_event.wkt
-#     flight_direction = wkt_event.flightDirection
-#     overlapping_frames = _get_frames_for_wkt(wkt, flight_direction)
-#     frame_path = Path(__file__).parent.parent / 'data' / 'frames.geojson'
-#     geometry = shapely_wkt.loads(wkt_event.wkt)
-#     gdf = gpd.read_file(frame_path, engine='pyogrio')
-#     frames: gpd.GeoDataFrame = gdf[gdf['frame_id'].isin([int(p) for p in overlapping_frames])]
-#     intersection = frames.intersection(geometry)
-#     return JSONResponse(
-#         {
-#             _pad_frame_str(frame_id): _simplify_multipolygons(geom).wkt
-#             for frame_id, geom in zip(gdf.iloc[intersection.index]['frame_id'], intersection)
-#         },
-#         headers=DEFAULT_HEADERS,
-#     )
-
-
-# def _simplify_multipolygons(geometry: BaseGeometry) -> BaseGeometry:
-#     """In case polygon intersects different sections of frame at once and get multi-polygon (swath corners for example), perform convex hull instead"""
-#     if geometry.geom_type == 'MultiPolygon':
-#         geometry = convex_hull(geometry)
-
-#     return geometry
 
 
 def _get_file_store_for_wkt(bucket: str, frame_id: str, polarization: str):

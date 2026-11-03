@@ -1,4 +1,3 @@
-# import rasterio
 import re
 from datetime import datetime, timedelta
 from time import perf_counter
@@ -47,21 +46,6 @@ def get_timeseries_over_aoi(
                 **fsspec_params,
             },
         )
-        # fs = SimpleCacheFileSystem(
-        #     target_protocol='reference',
-        #     cache_storage=f'/mnt/filesystem/{file_store.split("/")[-1]}',
-        #     target_options={
-        #         'target_options': dict(compression='gzip'),
-        #         'fo': f'{file_store}',
-        #         'remote_options': {
-        #             'anon': False,
-        #             'default_fill_cache': True,
-        #             'skip_instance_cache': False,
-        #             **fsspec_params,
-        #         },
-        #     },
-        #     asynchronous=True,
-        # )
 
     except Exception as exc:
         api_logger.error(f'Failed to open file. Original Error: {exc}')
@@ -94,8 +78,6 @@ def get_timeseries_over_aoi(
     start = perf_counter()
     if isinstance(wrapped_geometry, Point):
         values = _read_layers_at_pixel(values, lon=wrapped_geometry.x, lat=wrapped_geometry.y)
-    # elif isinstance(geometry, Polygon):
-    #     values = _read_layers_with_aoi(values, geometry)
     api_logger.info(f'AOI Read Speed: {perf_counter() - start} seconds')
     return _pandas_output(values, wkt=geometry.wkt)
 
@@ -109,7 +91,7 @@ def _latest_product_versions(values: xr.Dataset) -> xr.Dataset:
 
 def _minimum_version(values: xr.Dataset) -> xr.Dataset:
     """Only keep products of minimum version `0.9` or above"""
-    mask = values.coords['source_file_name'].str.match(r'.*((v1\..)|(v0\.9)).*\.nc?')
+    mask = values.coords['source_file_name'].str.match(r'.*(v1\..).*\.nc?')
     return values.isel(source_file_name=mask)
 
 
@@ -123,52 +105,6 @@ def _read_layers_at_pixel(dataset: xr.Dataset, lat: float, lon: float) -> xr.Dat
     yy_index = np.abs(dataset.y.data - yy).argmin()
 
     return dataset[_data_variables].isel(x=xx_index, y=yy_index)
-
-
-# Saving this functionality for polygons in future
-# def _read_layers_with_aoi(dataset: xr.Dataset, geometry: BaseGeometry):
-#     """
-#     Read a spatial subset from the stack with a reprojection of the provided geometry
-#     Returns the average values for each aoi at each timestep
-#     """
-#     crs = get_crs(dataset)
-#     epsg = crs.to_epsg()
-
-#     projected = _transform_geometry(geometry=geometry, target_proj=epsg)
-
-#     dataset.rio.set_spatial_dims(x_dim='x', y_dim='y', inplace=True)
-#     dataset.rio.write_crs(str(crs), inplace=True)
-
-#     d = {'col1': ['aoi'], 'geometry': [projected]}
-#     gdf = gpd.GeoDataFrame(d, crs=str(epsg))  # type: ignore
-
-#     # clip_box limits the clipped geometry to the aoi bounds,
-#     # otherwise rioxarray will load THE ENTIRE DATASET FOOTPRINT into memory.
-#     # Not a perfect solution, as any shape that isn't perfectly aligned with
-#     # bounding dimensions will lead to more remote reads than necessary
-#     # ex: the trianges between a bounding box and a rotated square will be
-#     # loaded by `clip()`
-
-#     # TODO: Explore opening only one frame, clipping it, then use those
-#     # indexes to read the remaining timesteps without loading the extra data
-#     # (assuming all data in uniformly alligned over a frame id, which should be the case)
-#     clipped_box = dataset.rio.clip_box(*projected.bounds)
-#     ds = clipped_box.rio.clip(gdf.geometry.values, gdf.crs, drop=False)
-#     for v in list(ds.coords.keys()):
-#         if ds.coords[v].dtype == object:
-#             ds.coords[v] = ds.coords[v].astype('unicode')
-
-#     for v in list(ds.variables.keys()):
-#         if ds[v].dtype == object:
-#             ds[v] = ds[v].astype('unicode')
-#     # ds.to_zarr('tests/zarr_test_store/', mode='w', consolidated=False)
-
-#     return ds.mean(['x', 'y'])
-
-
-# def _transform_geometry(geometry: BaseGeometry, source_proj='4326', target_proj='32610'):
-#     project = Transformer.from_crs(source_proj, target_proj, always_xy=True).transform
-#     return shapely_transform(project, geometry)
 
 
 def _to_crs(lat: float, lon: float, source_proj='4326', target_proj='32610'):
@@ -226,7 +162,11 @@ def _fix_rolling_reference(data: pandas.DataFrame) -> pandas.DataFrame:
 def _pandas_output(data: xr.Dataset, wkt: str):
     start = perf_counter()
     data = data.sortby('secondary_datetime')
-    pandas_values = data.to_dataframe()
+    try:
+        pandas_values = data.to_pandas()
+    except Exception as e:
+        print(e)
+        raise
     nans = pandas_values['short_wavelength_displacement'].isna()
 
     if len(pandas_values[~nans]) == 0:
