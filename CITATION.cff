@@ -1,0 +1,68 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+
+title: Discovery Displacement API
+doi: TODO
+contact:
+  - name: NASA Earthdata Forum
+    website: https://forum.earthdata.nasa.gov/viewforum.php
+  - name: ASF User Services
+    email: uso@asf.alaska.edu
+type: dataset
+license: CC0-1.0
+url: https://github.com/asfadmin/Discovery-DisplacementAPI
+repository-code: https://github.com/asfadmin/Discovery-DisplacementAPI
+keywords:
+  - OPERA
+  - OPERA Displacement
+  - ARIA GUNW
+  - SMAP
+  - UAVSAR
+  - Vertex
+  - Search
+  - NASA-ISRO Synthetic Aperture Radar
+  - Synthetic Aperture Radar
+  - SAR
+  - NASA
+  - Alaska Satellite Facility
+  - ASF
+  - Jet Propulsion Laboratory
+  - JPL
+  - data
+  - remote sensing
+  - earth science
+  - land surface
+  - geomorphic landforms
+  - geomorphic processes
+  - solid earth
+  - tectonics
+  - agriculture
+  - forest science
+  - cryosphere
+  - glaciers
+  - ice sheets
+  - frozen ground
+authors:
+  - given-names: William
+    family-names: Horn
+    affiliation: Alaska Satellite Facility, Geophysical Institute, University of Alaska Fairbanks, Fairbanks, AK USA
+    orcid: https://orcid.org/0009-0003-8206-5982
+    alias: williamh890
+  - given-names: Kim
+    family-names: Fairbanks
+    affiliation: Alaska Satellite Facility, Geophysical Institute, University of Alaska Fairbanks, Fairbanks, AK USA
+    alias: SpicyGarlicAlbacoreRoll
+  - given-names: Andrew
+    family-names: Player
+    affiliation: Alaska Satellite Facility, Geophysical Institute, University of Alaska Fairbanks, Fairbanks, AK USA
+    alias: AndrewPlayer3
+  - given-names: Forrest
+    family-names: Williams
+    affiliation: Alaska Satellite Facility, Geophysical Institute, University of Alaska Fairbanks, Fairbanks, AK USA
+    alias: forrestfwwilliams
+  - given-names: Jake
+    family-names: Herrmann
+    affiliation: Alaska Satellite Facility, Geophysical Institute, University of Alaska Fairbanks, Fairbanks, AK USA
+    alias: jtherrmann
