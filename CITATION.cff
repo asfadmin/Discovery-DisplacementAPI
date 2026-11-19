@@ -62,6 +62,7 @@ authors:
   - given-names: Andrew
     family-names: Player
     affiliation: Alaska Satellite Facility, Geophysical Institute, University of Alaska Fairbanks, Fairbanks, AK USA
+    orcid: https://orcid.org/0009-0008-9736-7314
     alias: AndrewPlayer3
   - given-names: Forrest
     family-names: Williams
